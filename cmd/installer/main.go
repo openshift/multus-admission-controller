@@ -21,7 +21,7 @@ import (
 )
 
 func main() {
-	namespace := flag.String("namespace", "default", "Namespace in which all Kubernetes resources will be created.")
+	namespace := flag.String("namespace", "kube-system", "Namespace in which all Kubernetes resources will be created.")
 	prefix := flag.String("prefix", "net-attach-def-admission-controller", "Prefix added to the names of all created resources.")
 	flag.Parse()
 
