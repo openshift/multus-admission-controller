@@ -17,10 +17,10 @@ package main
 import (
 	"flag"
 	"fmt"
-	"log"
 	"net/http"
 
 	"github.com/K8sNetworkPlumbingWG/net-attach-def-admission-controller/pkg/webhook"
+	"github.com/golang/glog"
 )
 
 func main() {
@@ -31,7 +31,7 @@ func main() {
 	key := flag.String("tls-private-key-file", "key.pem", "File containing the default x509 private key matching --tls-cert-file.")
 	flag.Parse()
 
-	log.Printf("INFO: starting net-attach-def-admission-controller webhook server")
+	glog.Infof("starting net-attach-def-admission-controller webhook server")
 
 	/* init API client */
 	webhook.SetupInClusterClient()
@@ -42,6 +42,6 @@ func main() {
 	/* start serving */
 	err := http.ListenAndServeTLS(fmt.Sprintf("%s:%d", *address, *port), *cert, *key, nil)
 	if err != nil {
-		log.Fatalf("FATAL: error starting web server: %s", err.Error())
+		glog.Fatalf("error starting web server: %s", err.Error())
 	}
 }

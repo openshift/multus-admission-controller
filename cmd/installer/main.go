@@ -17,7 +17,7 @@ package main
 import (
 	"flag"
 	"github.com/K8sNetworkPlumbingWG/net-attach-def-admission-controller/pkg/installer"
-	"log"
+	"github.com/golang/glog"
 )
 
 func main() {
@@ -25,6 +25,6 @@ func main() {
 	prefix := flag.String("prefix", "net-attach-def-admission-controller", "Prefix added to the names of all created resources.")
 	flag.Parse()
 
-	log.Printf("INFO: starting webhook installation")
+	glog.Infof("starting webhook installation")
 	installer.Install(*namespace, *prefix)
 }

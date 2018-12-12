@@ -15,12 +15,12 @@
 package installer
 
 import (
-	"fmt"
-	"log"
 	"strings"
 	"time"
 
 	"github.com/cloudflare/cfssl/csr"
+	"github.com/golang/glog"
+	"github.com/pkg/errors"
 
 	arv1beta1 "k8s.io/api/admissionregistration/v1beta1"
 	"k8s.io/api/certificates/v1beta1"
@@ -38,7 +38,7 @@ var (
 )
 
 func generateCSR() ([]byte, []byte, error) {
-	log.Printf("INFO: generating Certificate Signing Request")
+	glog.Infof("generating Certificate Signing Request")
 	serviceName := strings.Join([]string{prefix, "service"}, "-")
 	certRequest := csr.New()
 	certRequest.KeyRequest = &csr.BasicKeyRequest{"rsa", 2048}
@@ -55,9 +55,9 @@ func getSignedCertificate(request []byte) ([]byte, error) {
 	csrName := strings.Join([]string{prefix, "csr"}, "-")
 	csr, err := clientset.CertificatesV1beta1().CertificateSigningRequests().Get(csrName, metav1.GetOptions{})
 	if csr != nil && err == nil {
-		log.Printf("INFO: CSR %s already exists, trying to reuse it", csrName)
+		glog.Infof("CSR %s already exists, trying to reuse it", csrName)
 	} else {
-		log.Printf("INFO: creating CSR %s", csrName)
+		glog.Infof("creating CSR %s", csrName)
 		/* build Kubernetes CSR object */
 		csr := &v1beta1.CertificateSigningRequest{}
 		csr.ObjectMeta.Name = csrName
@@ -69,13 +69,13 @@ func getSignedCertificate(request []byte) ([]byte, error) {
 		/* push CSR to Kubernetes API server */
 		csr, err = clientset.CertificatesV1beta1().CertificateSigningRequests().Create(csr)
 		if err != nil {
-			return nil, fmt.Errorf("error creating CSR in Kubernetes API: %s", err)
+			return nil, errors.Wrap(err, "error creating CSR in Kubernetes API")
 		}
-		log.Printf("INFO: CSR pushed to the Kubernetes API")
+		glog.Infof("CSR pushed to the Kubernetes API")
 	}
 
 	if csr.Status.Certificate != nil {
-		log.Printf("INFO: using already issued certificate for CSR %s", csrName)
+		glog.Infof("using already issued certificate for CSR %s", csrName)
 		return csr.Status.Certificate, nil
 	}
 	/* approve certificate in K8s API */
@@ -88,18 +88,18 @@ func getSignedCertificate(request []byte) ([]byte, error) {
 		LastUpdateTime: metav1.Now(),
 	})
 	csr, err = clientset.CertificatesV1beta1().CertificateSigningRequests().UpdateApproval(csr)
-	log.Printf("INFO: certificate approval sent")
+	glog.Infof("certificate approval sent")
 	if err != nil {
-		return nil, fmt.Errorf("error approving CSR in Kubernetes API: %s", err)
+		return nil, errors.Wrap(err, "error approving CSR in Kubernetes API")
 	}
 
 	/* wait for the cert to be issued */
-	log.Printf("INFO: waiting for the signed certificate to be issued...")
+	glog.Infof("waiting for the signed certificate to be issued...")
 	start := time.Now()
 	for range time.Tick(time.Second) {
 		csr, err = clientset.CertificatesV1beta1().CertificateSigningRequests().Get(csrName, metav1.GetOptions{})
 		if err != nil {
-			return nil, fmt.Errorf("error getting signed ceritificate from the API server: %s", err)
+			return nil, errors.Wrap(err, "error getting signed ceritificate from the API server")
 		}
 		if csr.Status.Certificate != nil {
 			return csr.Status.Certificate, nil
@@ -109,7 +109,7 @@ func getSignedCertificate(request []byte) ([]byte, error) {
 		}
 	}
 
-	return nil, fmt.Errorf("error getting certificate from the API server: request timed out - verify that Kubernetes certificate signer is setup, more at https://kubernetes.io/docs/tasks/tls/managing-tls-in-a-cluster/#a-note-to-cluster-administrators")
+	return nil, errors.New("error getting certificate from the API server: request timed out - verify that Kubernetes certificate signer is setup, more at https://kubernetes.io/docs/tasks/tls/managing-tls-in-a-cluster/#a-note-to-cluster-administrators")
 }
 
 func createSecret(certificate, key []byte) error {
@@ -199,48 +199,48 @@ func createService() error {
 func removeServiceIfExists(serviceName string) {
 	service, err := clientset.CoreV1().Services(namespace).Get(serviceName, metav1.GetOptions{})
 	if service != nil && err == nil {
-		log.Printf("INFO: service %s already exists, removing it first", serviceName)
+		glog.Infof("service %s already exists, removing it first", serviceName)
 		err := clientset.CoreV1().Services(namespace).Delete(serviceName, &metav1.DeleteOptions{})
 		if err != nil {
-			fmt.Errorf("error trying to remove service: %s", err) // ?
+			glog.Errorf("error trying to remove service: %s", err)
 		}
-		log.Printf("INFO: service %s removed", serviceName)
+		glog.Infof("service %s removed", serviceName)
 	}
 }
 
 func removeValidatingWebhookIfExists(configName string) {
 	validatingWebhok, err := clientset.AdmissionregistrationV1beta1().ValidatingWebhookConfigurations().Get(configName, metav1.GetOptions{})
 	if validatingWebhok != nil && err == nil {
-		log.Printf("INFO: validating webhook %s already exists, removing it first", configName)
+		glog.Infof("validating webhook %s already exists, removing it first", configName)
 		err := clientset.AdmissionregistrationV1beta1().ValidatingWebhookConfigurations().Delete(configName, &metav1.DeleteOptions{})
 		if err != nil {
-			fmt.Errorf("error trying to remove validating webhook configuration: %s", err) // ?
+			glog.Errorf("error trying to remove validating webhook configuration: %s", err)
 		}
-		log.Printf("INFO: validating webhook configuration %s removed", configName)
+		glog.Infof("validating webhook configuration %s removed", configName)
 	}
 }
 
 func removeMutatingWebhookIfExists(configName string) {
 	config, err := clientset.AdmissionregistrationV1beta1().MutatingWebhookConfigurations().Get(configName, metav1.GetOptions{})
 	if config != nil && err == nil {
-		log.Printf("INFO: mutating webhook %s already exists, removing it first", configName)
+		glog.Infof("mutating webhook %s already exists, removing it first", configName)
 		err := clientset.AdmissionregistrationV1beta1().MutatingWebhookConfigurations().Delete(configName, &metav1.DeleteOptions{})
 		if err != nil {
-			log.Printf("ERROR: error trying to remove mutating webhook configuration: %s", err) // ?
+			glog.Errorf("error trying to remove mutating webhook configuration: %s", err)
 		}
-		log.Printf("INFO: mutating webhook configuration %s removed", configName)
+		glog.Infof("mutating webhook configuration %s removed", configName)
 	}
 }
 
 func removeSecretIfExists(secretName string) {
 	secret, err := clientset.CoreV1().Secrets(namespace).Get(secretName, metav1.GetOptions{})
 	if secret != nil && err == nil {
-		log.Printf("secret %s already exists, removing it first", secretName)
+		glog.Info("secret %s already exists, removing it first", secretName)
 		err := clientset.CoreV1().Secrets(namespace).Delete(secretName, &metav1.DeleteOptions{})
 		if err != nil {
-			log.Printf("ERROR: error trying to remove secret: %s", err) // ?
+			glog.Errorf("error trying to remove secret: %s", err)
 		}
-		log.Printf("INFO: secret %s removed", secretName)
+		glog.Infof("secret %s removed", secretName)
 	}
 }
 
@@ -248,11 +248,11 @@ func Install(k8sNamespace, namePrefix string) {
 	/* setup Kubernetes API client */
 	config, err := rest.InClusterConfig()
 	if err != nil {
-		log.Fatalf("FATAL: error loading Kubernetes in-cluster configuration: %s", err)
+		glog.Fatalf("error loading Kubernetes in-cluster configuration: %s", err)
 	}
 	clientset, err = kubernetes.NewForConfig(config)
 	if err != nil {
-		log.Fatalf("FATAL: error setting up Kubernetes client: %s", err)
+		glog.Fatalf("error setting up Kubernetes client: %s", err)
 	}
 
 	namespace = k8sNamespace
@@ -261,37 +261,37 @@ func Install(k8sNamespace, namePrefix string) {
 	/* generate CSR and private key */
 	csr, key, err := generateCSR()
 	if err != nil {
-		log.Fatalf("FATAL: error generating CSR and private key: %s", err)
+		glog.Fatalf("error generating CSR and private key: %s", err)
 	}
-	log.Printf("INFO: raw CSR and private key successfully created")
+	glog.Infof("raw CSR and private key successfully created")
 
 	/* obtain signed certificate */
 	certificate, err := getSignedCertificate(csr)
 	if err != nil {
-		log.Fatalf("FATAL: error getting signed certificate: %s", err)
+		glog.Fatalf("error getting signed certificate: %s", err)
 	}
-	log.Printf("INFO: signed certificate successfully obtained")
+	glog.Infof("signed certificate successfully obtained")
 
 	/* create secret and push it to the API */
 	err = createSecret(certificate, key)
 	if err != nil {
-		log.Fatalf("FATAL: error creating secret: %s", err)
+		glog.Fatalf("error creating secret: %s", err)
 	}
-	log.Printf("INFO: secret successfully created")
+	glog.Infof("secret successfully created")
 
 	/* create webhook configurations */
 	err = createValidatingWebhookConfiguration(certificate)
 	if err != nil {
-		log.Fatalf("FATAL: error creating validating webhook configuration: %s", err)
+		glog.Fatalf("error creating validating webhook configuration: %s", err)
 	}
-	log.Printf("INFO: validating webhook configuration successfully created")
+	glog.Infof("validating webhook configuration successfully created")
 
 	/* create service */
 	err = createService()
 	if err != nil {
-		log.Fatalf("FATAL: error creating service: %s", err)
+		glog.Fatalf("error creating service: %s", err)
 	}
-	log.Printf("INFO: service successfully created")
+	glog.Infof("service successfully created")
 
-	log.Printf("INFO: all resources created successfully")
+	glog.Infof("all resources created successfully")
 }

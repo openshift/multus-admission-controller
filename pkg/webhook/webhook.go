@@ -17,11 +17,11 @@ package webhook
 import (
 	"encoding/json"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"regexp"
 
 	"github.com/containernetworking/cni/libcni"
+	"github.com/golang/glog"
 	"github.com/intel/multus-cni/types"
 	"github.com/pkg/errors"
 
@@ -53,22 +53,22 @@ func validateNetworkAttachmentDefinition(netAttachDef types.NetworkAttachmentDef
 	isNameCorrect, err := regexp.MatchString(nameRegex, netAttachDef.Metadata.Name)
 	if !isNameCorrect {
 		err := errors.New("net-attach-def name is invalid")
-		log.Printf("INFO: %s", err)
+		glog.Info(err)
 		return false, err
 	}
 	if err != nil {
 		err := errors.Wrap(err, "error validating name")
-		log.Printf("ERROR: %v", err)
+		glog.Error(err)
 		return false, err
 	}
 
 	if netAttachDef.Spec.Config == "" {
 		err := errors.Wrap(err, "network config is empty")
-		log.Printf("INFO: %v", err)
+		glog.Info(err)
 		return false, err
 	}
 
-	log.Printf("INFO: validating network config spec: %s", netAttachDef.Spec.Config)
+	glog.Infof("validating network config spec: %s", netAttachDef.Spec.Config)
 
 	/* try to unmarshal config into NetworkConfig or NetworkConfigList
 	   using actual code from libcni - if succesful, it means that the config
@@ -76,16 +76,16 @@ func validateNetworkAttachmentDefinition(netAttachDef types.NetworkAttachmentDef
 	confBytes := []byte(netAttachDef.Spec.Config)
 	_, err = libcni.ConfListFromBytes(confBytes)
 	if err != nil {
-		log.Printf("INFO: spec is not a valid network config list: %s - trying to parse into standalone config", err)
+		glog.Infof("spec is not a valid network config list: %s - trying to parse into standalone config", err)
 		_, err = libcni.ConfFromBytes(confBytes)
 		if err != nil {
-			log.Printf("INFO: spec is not a valid network config: %s", confBytes)
+			glog.Infof("spec is not a valid network config: %s", confBytes)
 			err := errors.Wrap(err, "invalid config")
 			return false, err
 		}
 	}
 
-	log.Printf("INFO: AdmissionReview request allowed: Network Attachment Definition '%s' is valid", confBytes)
+	glog.Infof("AdmissionReview request allowed: Network Attachment Definition '%s' is valid", confBytes)
 	return true, nil
 }
 
@@ -116,7 +116,7 @@ func readAdmissionReview(req *http.Request) (*v1beta1.AdmissionReview, int, erro
 
 	if len(body) == 0 {
 		err := errors.New("Error reading HTTP request: empty body")
-		log.Printf("ERROR: %s", err)
+		glog.Error(err)
 		return nil, http.StatusBadRequest, err
 	}
 
@@ -124,7 +124,7 @@ func readAdmissionReview(req *http.Request) (*v1beta1.AdmissionReview, int, erro
 	contentType := req.Header.Get("Content-Type")
 	if contentType != "application/json" {
 		err := errors.Errorf("Invalid Content-Type='%s', expected 'application/json'", contentType)
-		log.Printf("ERROR: %v", err)
+		glog.Error(err)
 		return nil, http.StatusUnsupportedMediaType, err
 	}
 
@@ -132,7 +132,7 @@ func readAdmissionReview(req *http.Request) (*v1beta1.AdmissionReview, int, erro
 	ar, err := deserializeAdmissionReview(body)
 	if err != nil {
 		err := errors.Wrap(err, "error deserializing AdmissionReview")
-		log.Printf("ERROR: %v", err)
+		glog.Error(err)
 		return nil, http.StatusBadRequest, err
 	}
 
@@ -172,7 +172,7 @@ func handleValidationError(w http.ResponseWriter, ar *v1beta1.AdmissionReview, o
 }
 
 func writeResponse(w http.ResponseWriter, ar *v1beta1.AdmissionReview) {
-	log.Printf("INFO: sending response to the Kubernetes API server")
+	glog.Infof("sending response to the Kubernetes API server")
 	resp, _ := json.Marshal(ar)
 	w.Write(resp)
 }
@@ -201,7 +201,7 @@ func ValidateHandler(w http.ResponseWriter, req *http.Request) {
 	/* perpare response and send it back to the API server */
 	err = prepareAdmissionReviewResponse(allowed, "", ar)
 	if err != nil {
-		log.Printf("ERROR: %v", err)
+		glog.Error(err)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -212,10 +212,10 @@ func SetupInClusterClient() {
 	/* setup Kubernetes API client */
 	config, err := rest.InClusterConfig()
 	if err != nil {
-		log.Fatalf("FATAL: %s", err)
+		glog.Fatal(err)
 	}
 	clientset, err = kubernetes.NewForConfig(config)
 	if err != nil {
-		log.Fatalf("FATAL: %s", err)
+		glog.Fatal(err)
 	}
 }

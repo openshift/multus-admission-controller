@@ -86,13 +86,14 @@ kubectl logs -l app=net-attach-def-admission-controller
 ```
 Example output showing logs for handling requests generated in the "Verifying installation section":
 ```
-2018/12/10 13:31:31 INFO: validating network config spec: { "invalid": "config" }
-2018/12/10 13:31:31 INFO: spec is not a valid network config list: error parsing configuration list: no name - trying to parse into standalone config
-2018/12/10 13:31:31 INFO: spec is not a valid network config: { "invalid": "config" }
-2018/12/10 13:31:31 INFO: sending response to the Kubernetes API server
-2018/12/10 13:31:36 INFO: validating network config spec: { "cniVersion": "0.3.0", "name": "a-bridge-network", "type": "bridge", "bridge": "br0", "isGateway": true, "ipam": { "type": "host-local", "subnet": "192.168.5.0/24", "dataDir": "/mnt/cluster-ipam" } }
-2018/12/10 13:31:36 INFO: spec is not a valid network config list: error parsing configuration list: no 'plugins' key - trying to parse into standalone config
-2018/12/10 13:31:36 INFO: AdmissionReview request allowed: Network Attachment Definition '{ "cniVersion": "0.3.0", "name": "a-bridge-network", "type": "bridge", "bridge": "br0", "isGateway": true, "ipam": { "type": "host-local", "subnet": "192.168.5.0/24", "dataDir": "/mnt/cluster-ipam" } }' is valid
-2018/12/10 13:31:36 INFO: sending response to the Kubernetes API server
+I1212 13:47:03.169902       1 main.go:34] starting net-attach-def-admission-controller webhook server
+I1212 13:47:47.917792       1 webhook.go:71] validating network config spec: { "invalid": "config" }
+I1212 13:47:47.918067       1 webhook.go:79] spec is not a valid network config list: error parsing configuration list: no name - trying to parse into standalone config
+I1212 13:47:47.918089       1 webhook.go:82] spec is not a valid network config: { "invalid": "config" }
+I1212 13:47:47.918115       1 webhook.go:175] sending response to the Kubernetes API server
+I1212 13:48:25.173150       1 webhook.go:71] validating network config spec: { "cniVersion": "0.3.0", "name": "a-bridge-network", "type": "bridge", "bridge": "br0", "isGateway": true, "ipam": { "type": "host-local", "subnet": "192.168.5.0/24", "dataDir": "/mnt/cluster-ipam" } }
+I1212 13:48:25.173233       1 webhook.go:79] spec is not a valid network config list: error parsing configuration list: no 'plugins' key - trying to parse into standalone config
+I1212 13:48:25.173271       1 webhook.go:88] AdmissionReview request allowed: Network Attachment Definition '{ "cniVersion": "0.3.0", "name": "a-bridge-network", "type": "bridge", "bridge": "br0", "isGateway": true, "ipam": { "type": "host-local", "subnet": "192.168.5.0/24", "dataDir": "/mnt/cluster-ipam" } }' is valid
+I1212 13:48:25.173287       1 webhook.go:175] sending response to the Kubernetes API server
 ```
 
