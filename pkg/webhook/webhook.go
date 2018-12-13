@@ -63,7 +63,7 @@ func validateNetworkAttachmentDefinition(netAttachDef types.NetworkAttachmentDef
 	}
 
 	if netAttachDef.Spec.Config == "" {
-		err := errors.Wrap(err, "network config is empty")
+		err := errors.New("network config is empty")
 		glog.Info(err)
 		return false, err
 	}
