@@ -1,0 +1,55 @@
+language: go
+# see https://docs.travis-ci.com/user/reference/overview/#Virtualization-environments
+# for the detail
+# sudo: requried
+dist: trusty
+
+# env:
+#   global:
+#     - REGISTRY_USER=${REGISTRY_USER}
+#     - REGISTRY_PASS=${REGISTRY_PASS}
+#     - secure: "${REGISTRY_SECURE}"
+
+# before_script:
+#   - golint pkg/... cmd/...
+#   - go fmt pkg/... cmd/...
+#   - go vet pkg/... cmd/...
+
+script:
+  - make
+  - docker build -f Dockerfile.openshift -t nfvpe/net-attach-def-admission-controller .
+
+# deploy:
+#   - provider: releases
+#     api_key:
+#       secure: "${DEPLOY_SECURE}"
+#     file_glob: true
+#     file: "$TRAVIS_BUILD_DIR/dist/*/*.gz"
+#     skip_cleanup: true
+#     on:
+#       tags: true
+#       all_branches: true
+#       condition: "$TRAVIS_TAG =~ ^v[0-9].*$"
+#   # Push images to Dockerhub on tag
+#   - provider: script
+#     script: >
+#       bash -c '
+#       docker tag nfvpe/multus nfvpe/multus:$TRAVIS_TAG;
+#       docker login -u "$REGISTRY_USER" -p "$REGISTRY_PASS"; 
+#       docker push nfvpe/multus; 
+#       docker push nfvpe/multus:$TRAVIS_TAG;
+#       echo foo'
+#     on:
+#       tags: true
+#       all_branches: true
+#       condition: "$TRAVIS_TAG =~ ^v[0-9].*$"
+#   # Push images to Dockerhub on merge to master
+#   - provider: script
+#     on:
+#       branch: master
+#     script: >
+#       bash -c '
+#       docker tag nfvpe/multus nfvpe/multus:snapshot;
+#       docker login -u "$REGISTRY_USER" -p "$REGISTRY_PASS";
+#       docker push nfvpe/multus:snapshot; 
+#       echo foo'
