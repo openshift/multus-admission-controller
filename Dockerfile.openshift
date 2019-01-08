@@ -1,0 +1,26 @@
+# This dockerfile is specific to building Multus admission controller for OpenShift
+FROM openshift/origin-release:golang-1.10 as builder
+
+# Add everything
+ADD . /usr/src/ose-multus-admission-controller
+
+ENV PKG_NAME=github.com/K8sNetworkPlumbingWG/net-attach-def-admission-controller
+ENV PKG_PATH=$GOPATH/src/$PKG_NAME
+RUN mkdir -p $PKG_PATH
+
+COPY . $PKG_PATH/
+WORKDIR $PKG_PATH
+RUN go install ./...
+
+WORKDIR /
+
+FROM openshift/origin-base
+RUN mkdir -p /go/src/github.com/K8sNetworkPlumbingWG/net-attach-def-admission-controller/cmd
+COPY --from=builder /go/src/github.com/K8sNetworkPlumbingWG/net-attach-def-admission-controller/cmd/* /go/src/github.com/K8sNetworkPlumbingWG/net-attach-def-admission-controller/cmd/
+
+LABEL io.k8s.display-name="Container Networking Plugins" \
+      io.k8s.description="This is a component of OpenShift Container Platform and provides an admission controller for Multus CNI custom resources." \
+      io.openshift.tags="openshift" \
+      maintainer="Doug Smith <dosmith@redhat.com>"
+
+CMD ["webhook"]

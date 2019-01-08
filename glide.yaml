@@ -33,6 +33,8 @@ import:
   subpackages:
   - kubernetes
   - rest
+- package: github.com/json-iterator/go
+  version: f2b4162afba35581b6d4a50d3b8f34e33c144682
 testImport:
 - package: github.com/onsi/ginkgo
   version: ^1.7.0
