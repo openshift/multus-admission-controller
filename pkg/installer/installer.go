@@ -128,6 +128,48 @@ func createSecret(certificate, key []byte) error {
 	return err
 }
 
+func createIsolatingWebhookConfiguration(certificate []byte) error {
+	configName := strings.Join([]string{prefix, "isolating-config"}, "-")
+	serviceName := strings.Join([]string{prefix, "service"}, "-")
+	removeValidatingWebhookIfExists(configName)
+	failurePolicy := arv1beta1.Ignore
+	path := "/isolate"
+	configuration := &arv1beta1.ValidatingWebhookConfiguration{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: configName,
+			Labels: map[string]string{
+				"app": prefix,
+			},
+		},
+		Webhooks: []arv1beta1.Webhook{
+			{
+				Name: configName + ".k8s.cni.cncf.io",
+				ClientConfig: arv1beta1.WebhookClientConfig{
+					CABundle: certificate,
+					Service: &arv1beta1.ServiceReference{
+						Namespace: namespace,
+						Name:      serviceName,
+						Path:      &path,
+					},
+				},
+				FailurePolicy: &failurePolicy,
+				Rules: []arv1beta1.RuleWithOperations{
+					{
+						Operations: []arv1beta1.OperationType{arv1beta1.Create},
+						Rule: arv1beta1.Rule{
+							APIGroups:   []string{"apps", ""},
+							APIVersions: []string{"v1"},
+							Resources:   []string{"pods"},
+						},
+					},
+				},
+			},
+		},
+	}
+	_, err := clientset.AdmissionregistrationV1beta1().ValidatingWebhookConfigurations().Create(configuration)
+	return err
+}
+
 func createValidatingWebhookConfiguration(certificate []byte) error {
 	configName := strings.Join([]string{prefix, "validating-config"}, "-")
 	serviceName := strings.Join([]string{prefix, "service"}, "-")
@@ -142,7 +184,7 @@ func createValidatingWebhookConfiguration(certificate []byte) error {
 			},
 		},
 		Webhooks: []arv1beta1.Webhook{
-			arv1beta1.Webhook{
+			{
 				Name: configName + ".k8s.cni.cncf.io",
 				ClientConfig: arv1beta1.WebhookClientConfig{
 					CABundle: certificate,
@@ -154,7 +196,7 @@ func createValidatingWebhookConfiguration(certificate []byte) error {
 				},
 				FailurePolicy: &failurePolicy,
 				Rules: []arv1beta1.RuleWithOperations{
-					arv1beta1.RuleWithOperations{
+					{
 						Operations: []arv1beta1.OperationType{arv1beta1.Create},
 						Rule: arv1beta1.Rule{
 							APIGroups:   []string{"k8s.cni.cncf.io"},
@@ -182,7 +224,7 @@ func createService() error {
 		},
 		Spec: corev1.ServiceSpec{
 			Ports: []corev1.ServicePort{
-				corev1.ServicePort{
+				{
 					Port:       443,
 					TargetPort: intstr.FromInt(443),
 				},
@@ -235,7 +277,7 @@ func removeMutatingWebhookIfExists(configName string) {
 func removeSecretIfExists(secretName string) {
 	secret, err := clientset.CoreV1().Secrets(namespace).Get(secretName, metav1.GetOptions{})
 	if secret != nil && err == nil {
-		glog.Info("secret %s already exists, removing it first", secretName)
+		glog.Infof("secret %s already exists, removing it first", secretName)
 		err := clientset.CoreV1().Secrets(namespace).Delete(secretName, &metav1.DeleteOptions{})
 		if err != nil {
 			glog.Errorf("error trying to remove secret: %s", err)
@@ -285,6 +327,12 @@ func Install(k8sNamespace, namePrefix string) {
 		glog.Fatalf("error creating validating webhook configuration: %s", err)
 	}
 	glog.Infof("validating webhook configuration successfully created")
+
+	err = createIsolatingWebhookConfiguration(certificate)
+	if err != nil {
+		glog.Fatalf("error creating Isolating webhook configuration: %s", err)
+	}
+	glog.Infof("Isolating webhook configuration successfully created")
 
 	/* create service */
 	err = createService()
