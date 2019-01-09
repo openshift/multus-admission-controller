@@ -25,7 +25,7 @@ spec:
       serviceAccount: net-attach-def-admission-controller-sa
       containers:
       - name: install-net-attach-def-admission-controller-deps
-        image: net-attach-def-admission-controller:latest
+        image: nfvpe/net-attach-def-admission-controller:snapshot
         command:
         - installer
         args:
