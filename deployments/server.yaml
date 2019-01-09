@@ -31,7 +31,7 @@ spec:
     spec:
       containers:
       - name: net-attach-def-admission-controller
-        image: net-attach-def-admission-controller
+        image: nfvpe/net-attach-def-admission-controller:snapshot
         command:
         - webhook
         args:
