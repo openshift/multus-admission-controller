@@ -38,6 +38,7 @@ func main() {
 
 	/* register handlers */
 	http.HandleFunc("/validate", webhook.ValidateHandler)
+	http.HandleFunc("/isolate", webhook.IsolateHandler)
 
 	/* start serving */
 	err := http.ListenAndServeTLS(fmt.Sprintf("%s:%d", *address, *port), *cert, *key, nil)

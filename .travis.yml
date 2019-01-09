@@ -42,3 +42,12 @@ deploy:
       docker login -u "$REGISTRY_USER" -p "$REGISTRY_PASS";
       docker push nfvpe/net-attach-def-admission-controller:snapshot; 
       echo foo'
+  - provider: script
+    on:
+      branch: develop
+    script: >
+      bash -c '
+      docker tag nfvpe/net-attach-def-admission-controller nfvpe/net-attach-def-admission-controller:snapshot;
+      docker login -u "$REGISTRY_USER" -p "$REGISTRY_PASS";
+      docker push nfvpe/net-attach-def-admission-controller:snapshot; 
+      echo foo'

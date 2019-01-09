@@ -16,9 +16,11 @@ package webhook
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"regexp"
+	"strings"
 
 	"github.com/containernetworking/cni/libcni"
 	"github.com/golang/glog"
@@ -26,6 +28,7 @@ import (
 	"github.com/pkg/errors"
 
 	"k8s.io/api/admission/v1beta1"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
@@ -154,6 +157,38 @@ func deserializeAdmissionReview(body []byte) (*v1beta1.AdmissionReview, error) {
 	return ar, err
 }
 
+func analyzeIsolationAnnotation(ar *v1beta1.AdmissionReview) (bool, error) {
+
+	var metadata *metav1.ObjectMeta
+	var pod v1.Pod
+
+	req := ar.Request
+
+	if err := json.Unmarshal(req.Object.Raw, &pod); err != nil {
+		glog.Errorf("Could not unmarshal raw object: %v", err)
+		return false, err
+	}
+
+	metadata = &pod.ObjectMeta
+	annotations := metadata.GetAnnotations()
+	if annotations == nil {
+		annotations = map[string]string{}
+	}
+
+	if len(annotations[networksAnnotationKey]) > 0 {
+		glog.Infof("Analyzing %s annotation: %s", networksAnnotationKey, annotations[networksAnnotationKey])
+		if strings.Contains(annotations[networksAnnotationKey], "/") {
+			annotationerrostring := fmt.Sprintf("%s annotations must not refer to namespaced values (must use local namespace, i.e. must not contain a /), rejected: %s", networksAnnotationKey, annotations[networksAnnotationKey])
+			annotationerror := errors.New(annotationerrostring)
+			return false, annotationerror
+		}
+		glog.Infof("Allowed value: %s", annotations[networksAnnotationKey])
+	}
+
+	return true, nil
+
+}
+
 func deserializeNetworkAttachmentDefinition(ar *v1beta1.AdmissionReview) (types.NetworkAttachmentDefinition, error) {
 	/* unmarshal NetworkAttachmentDefinition from AdmissionReview request */
 	netAttachDef := types.NetworkAttachmentDefinition{}
@@ -172,11 +207,38 @@ func handleValidationError(w http.ResponseWriter, ar *v1beta1.AdmissionReview, o
 }
 
 func writeResponse(w http.ResponseWriter, ar *v1beta1.AdmissionReview) {
-	glog.Infof("sending response to the Kubernetes API server")
+	// glog.Infof("sending response to the Kubernetes API server")
 	resp, _ := json.Marshal(ar)
 	w.Write(resp)
 }
 
+// IsolateHandler Handles namespace isolation validation.
+func IsolateHandler(w http.ResponseWriter, req *http.Request) {
+
+	var allowed bool
+
+	ar, httpStatus, err := readAdmissionReview(req)
+	if err != nil {
+		http.Error(w, err.Error(), httpStatus)
+		return
+	}
+
+	allowed, err = analyzeIsolationAnnotation(ar)
+	if err != nil {
+		handleValidationError(w, ar, err)
+		return
+	}
+
+	err = prepareAdmissionReviewResponse(allowed, "", ar)
+	if err != nil {
+		glog.Error(err)
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	writeResponse(w, ar)
+}
+
+// ValidateHandler handles net-attach-def validation requests
 func ValidateHandler(w http.ResponseWriter, req *http.Request) {
 	/* read AdmissionReview from the HTTP request */
 	ar, httpStatus, err := readAdmissionReview(req)
@@ -208,6 +270,7 @@ func ValidateHandler(w http.ResponseWriter, req *http.Request) {
 	writeResponse(w, ar)
 }
 
+// SetupInClusterClient sets up api configuration
 func SetupInClusterClient() {
 	/* setup Kubernetes API client */
 	config, err := rest.InClusterConfig()
