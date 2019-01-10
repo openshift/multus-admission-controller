@@ -2,10 +2,8 @@
 FROM openshift/origin-release:golang-1.10 as builder
 
 # Add everything
-ADD . /usr/src/ose-multus-admission-controller
-
 ENV PKG_NAME=github.com/K8sNetworkPlumbingWG/net-attach-def-admission-controller
-ENV PKG_PATH=$GOPATH/src/$PKG_NAME
+ENV PKG_PATH=/go/src/$PKG_NAME
 RUN mkdir -p $PKG_PATH
 
 COPY . $PKG_PATH/
