@@ -9,6 +9,8 @@ if [ ! -h gopath/src/${REPO_PATH} ]; then
 	ln -s ../../../.. gopath/src/${REPO_PATH} || exit 255
 fi
 
+cp -a vendor/* gopath/src/
+
 export GOBIN=${PWD}/bin
 export GOPATH=${PWD}/gopath
 
