@@ -14,10 +14,15 @@ export GOPATH=${PWD}/gopath
 
 echo "Building admission controller"
 # go install ${REPO_PATH}/...
-go build -o /go/bin/installer ${REPO_PATH}/pkg/installer
-go build -o /go/bin/webhook ${REPO_PATH}/pkg/webhook
-chmod +x /go/bin/installer
-chmod +x /go/bin/webhook
+mkdir -p bin
+workdir=$(pwd)
+cd gopath/src/${REPO_PATH}
+go install ./...
+# go build -o ./bin/installer ${REPO_PATH}/pkg/installer
+# go build -o ./bin/webhook ${REPO_PATH}/pkg/webhook
+chmod +x ./bin/installer
+chmod +x ./bin/webhook
+cd $workdir
 # go install ./...
 
 
