@@ -53,26 +53,35 @@ func generateCSR() ([]byte, []byte, error) {
 
 func getSignedCertificate(request []byte) ([]byte, error) {
 	csrName := strings.Join([]string{prefix, "csr"}, "-")
-	csr, err := clientset.CertificatesV1beta1().CertificateSigningRequests().Get(csrName, metav1.GetOptions{})
-	if csr != nil && err == nil {
-		glog.Infof("CSR %s already exists, trying to reuse it", csrName)
-	} else {
-		glog.Infof("creating CSR %s", csrName)
-		/* build Kubernetes CSR object */
-		csr := &v1beta1.CertificateSigningRequest{}
-		csr.ObjectMeta.Name = csrName
-		csr.ObjectMeta.Namespace = namespace
-		csr.Spec.Request = request
-		csr.Spec.Groups = []string{"system:authenticated"}
-		csr.Spec.Usages = []v1beta1.KeyUsage{v1beta1.UsageDigitalSignature, v1beta1.UsageServerAuth, v1beta1.UsageKeyEncipherment}
-
-		/* push CSR to Kubernetes API server */
-		csr, err = clientset.CertificatesV1beta1().CertificateSigningRequests().Create(csr)
-		if err != nil {
-			return nil, errors.Wrap(err, "error creating CSR in Kubernetes API")
+	delcsr, err := clientset.CertificatesV1beta1().CertificateSigningRequests().Get(csrName, metav1.GetOptions{})
+	if delcsr != nil && err == nil {
+		// glog.Infof("CSR %s already exists, trying to reuse it", csrName)
+		existingcsr, err := clientset.CertificatesV1beta1().CertificateSigningRequests().Get(csrName, metav1.GetOptions{})
+		if existingcsr != nil && err == nil {
+			glog.Infof("csr %s already exists, removing it first", csrName)
+			err := clientset.CertificatesV1beta1().CertificateSigningRequests().Delete(csrName, &metav1.DeleteOptions{})
+			if err != nil {
+				glog.Errorf("error trying to remove csr: %s", err)
+			}
+			glog.Infof("existingcsr %s removed", csrName)
 		}
-		glog.Infof("CSR pushed to the Kubernetes API")
 	}
+
+	glog.Infof("creating CSR %s", csrName)
+	/* build Kubernetes CSR object */
+	csr := &v1beta1.CertificateSigningRequest{}
+	csr.ObjectMeta.Name = csrName
+	csr.ObjectMeta.Namespace = namespace
+	csr.Spec.Request = request
+	csr.Spec.Groups = []string{"system:authenticated"}
+	csr.Spec.Usages = []v1beta1.KeyUsage{v1beta1.UsageDigitalSignature, v1beta1.UsageServerAuth, v1beta1.UsageKeyEncipherment}
+
+	/* push CSR to Kubernetes API server */
+	csr, err = clientset.CertificatesV1beta1().CertificateSigningRequests().Create(csr)
+	if err != nil {
+		return nil, errors.Wrap(err, "error creating CSR in Kubernetes API")
+	}
+	glog.Infof("CSR pushed to the Kubernetes API")
 
 	if csr.Status.Certificate != nil {
 		glog.Infof("using already issued certificate for CSR %s", csrName)
@@ -115,6 +124,12 @@ func getSignedCertificate(request []byte) ([]byte, error) {
 func createSecret(certificate, key []byte) error {
 	secretName := strings.Join([]string{prefix, "secret"}, "-")
 	removeSecretIfExists(secretName)
+	// // !bang
+	// checksecret, checkerr := clientset.CoreV1().Secrets(namespace).Get(secretName, metav1.GetOptions{})
+	// if checksecret != nil && checkerr == nil {
+	// 	glog.Infof("Secret %s already exists, trying to reuse it", secretName)
+	// 	return nil
+	// }
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: secretName,
