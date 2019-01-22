@@ -74,5 +74,5 @@ make
 
 For full installation and troubleshooting steps please see [Installation guide](docs/installation.md).
 
-For developer information, refer to the [developer guide](docs/developer.md). 
+For developer information, refer to the [developer guide](docs/developer.md).
 
