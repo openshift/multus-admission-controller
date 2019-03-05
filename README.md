@@ -6,12 +6,10 @@ This admission controller is aware of some of the aspects of what's required whe
 
 ## Getting started
 
-Clone this repository and apply these manifests:
+Clone this repository and execute `./hack/webhook-deployment.sh` to deploy:
 
 ```
-kubectl apply -f deployments/rbac.yaml \
-  -f deployments/install.yaml \
-  -f deployments/server.yaml
+./hack/webhook-deployment.sh
 ```
 
 ## Example of the admission controller in action

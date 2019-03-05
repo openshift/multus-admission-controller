@@ -20,11 +20,7 @@ mkdir -p bin
 workdir=$(pwd)
 cd gopath/src/${REPO_PATH}
 # go install ./...
-go build -o ./bin/installer ${REPO_PATH}/cmd/installer
 go build -o ./bin/webhook ${REPO_PATH}/cmd/webhook
-chmod +x ./bin/installer
 chmod +x ./bin/webhook
 cd $workdir
 # go install ./...
-
-
