@@ -15,8 +15,6 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  labels:
-    app: net-attach-def-admission-controller
   name: net-attach-def-admission-controller-server
   namespace: kube-system
 spec:
@@ -37,15 +35,16 @@ spec:
         args:
         - -bind-address=0.0.0.0
         - -port=443
-        - -tls-private-key-file=/webhook/tls/key.pem
-        - -tls-cert-file=/webhook/tls/cert.pem
+        - -tls-private-key-file=/etc/webhook/key.pem
+        - -tls-cert-file=/etc/webhook/cert.pem
         - -alsologtostderr=true
         volumeMounts:
-        - mountPath: /webhook/tls
-          name: net-attach-def-admission-controller-secret
+        - name: webhook-certs
+          mountPath: /etc/webhook
           readOnly: True
-        imagePullPolicy: IfNotPresent
+        imagePullPolicy: Always
+        #imagePullPolicy: IfNotPresent
       volumes:
-      - name: net-attach-def-admission-controller-secret
+      - name: webhook-certs
         secret:
           secretName: net-attach-def-admission-controller-secret
