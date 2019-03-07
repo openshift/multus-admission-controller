@@ -8,7 +8,7 @@ webhooks:
     clientConfig:
       service:
         name: net-attach-def-admission-controller-service
-        namespace: kube-system
+        namespace: ${NAMESPACE}
         path: "/isolate"
       caBundle: ${CA_BUNDLE}
     rules:
@@ -26,7 +26,7 @@ webhooks:
     clientConfig:
       service:
         name: net-attach-def-admission-controller-service
-        namespace: kube-system
+        namespace: ${NAMESPACE}
         path: "/validate"
       caBundle: ${CA_BUNDLE}
     rules:

@@ -13,7 +13,7 @@ Create ssl certificate file which is used for admission controller:
 ./hack/webhook-create-signed-cert.sh
 ```
 
-*Note: If you want to use non-self-signed certificate, you just create secret resource as following command:
+*Note: If you want to use non-self-signed certificate, you just create secret resource as following command (the secret CSR is approbed by Kubernetes as the [Kubernetes document](https://kubernetes.io/docs/tasks/tls/managing-tls-in-a-cluster/#create-a-certificate-signing-request-object-to-send-to-the-kubernetes-api)):
 ```
 kubectl create secret generic net-attach-def-admission-controller-secret \
         --from-file=key.pem=<your server-key.pem> \

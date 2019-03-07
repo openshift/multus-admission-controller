@@ -9,7 +9,6 @@ This admission controller is aware of some of the aspects of what's required whe
 Clone this repository and execute `./hack/webhook-deployment.sh` to deploy:
 
 ```
-$ ./hack/webhook-create-signed-cert.sh
 $ ./hack/webhook-deployment.sh
 ```
 
