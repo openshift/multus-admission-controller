@@ -1,15 +1,10 @@
-hash: 5590ec7003f584acebd0aeb321889afffb48365b03178db0acaab5296df83b69
-updated: 2019-01-08T10:09:13.555380252-05:00
+hash: ea7fd94ba806d1b0b803efcbfd440502a1482e41324b79d9a7731dae41f9282b
+updated: 2019-03-12T18:10:43.63713689+09:00
 imports:
 - name: github.com/cloudflare/cfssl
   version: 5d63dbd981b5c408effbb58c442d54761ff94fbd
   subpackages:
-  - crypto/pkcs7
   - csr
-  - errors
-  - helpers
-  - helpers/derhelpers
-  - log
 - name: github.com/containernetworking/cni
   version: 07c1a6da47b7fbf8b357f4949ecce2113e598491
   subpackages:
@@ -28,7 +23,7 @@ imports:
   - proto
   - sortkeys
 - name: github.com/golang/glog
-  version: 44145f04b68cf362d9c4df2182967c2275eaefed
+  version: 23def4e6c14b4da8ac2ed8007337bc5eb5007998
 - name: github.com/golang/protobuf
   version: b4deda0973fb4c70b50d226b1af49f3da59f5265
   subpackages:
@@ -39,13 +34,6 @@ imports:
   - ptypes/timestamp
 - name: github.com/google/btree
   version: 7d79101e329e5a3adf994758c578dab82b90c017
-- name: github.com/google/certificate-transparency-go
-  version: 37ca251ce2efb13423bf4266eb49efd08cf2fd0e
-  subpackages:
-  - asn1
-  - tls
-  - x509
-  - x509/pkix
 - name: github.com/google/gofuzz
   version: 44d81051d367757e1c7c6a5a86423ece9afcf63c
 - name: github.com/googleapis/gnostic
@@ -76,11 +64,6 @@ imports:
 - name: golang.org/x/crypto
   version: 49796115aa4b964c318aad4f3084fdb41e9aa067
   subpackages:
-  - cryptobyte
-  - cryptobyte/asn1
-  - ocsp
-  - pkcs12
-  - pkcs12/internal/rc2
   - ssh/terminal
 - name: golang.org/x/net
   version: 1c05540f6879653db88113bc4a2b70aec4bd491f
@@ -128,7 +111,7 @@ imports:
 - name: gopkg.in/yaml.v2
   version: 670d4cfef0544295bc27a114dbac37980d83185a
 - name: k8s.io/api
-  version: 072894a440bdee3a891dea811fe42902311cd2a3
+  version: 2d6f90ab1293a1fb871cf149423ebb72aa7423aa
   subpackages:
   - admission/v1beta1
   - admissionregistration/v1alpha1
@@ -257,7 +240,7 @@ testImports:
   - watch
   - winfile
 - name: github.com/onsi/ginkgo
-  version: 2e1be8f7d90e9d3e3e58b0ce470f2f14d075406f
+  version: eea6ad008b96acdaa524f5b409513bf062b500ad
   subpackages:
   - config
   - extensions/table

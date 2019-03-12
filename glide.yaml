@@ -1,4 +1,6 @@
 package: github.com/K8sNetworkPlumbingWG/net-attach-def-admission-controller
+ignore:
+- bytes
 import:
 - package: github.com/cloudflare/cfssl
   version: ^1.3.2
