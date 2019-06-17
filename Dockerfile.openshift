@@ -4,6 +4,7 @@ FROM openshift/origin-release:golang-1.10 as builder
 # Add everything
 ENV PKG_NAME=github.com/K8sNetworkPlumbingWG/net-attach-def-admission-controller
 ENV PKG_PATH=/go/src/$PKG_NAME
+ENV GO111MODULE=off
 RUN mkdir -p $PKG_PATH
 
 COPY . $PKG_PATH/
@@ -21,4 +22,4 @@ LABEL io.k8s.display-name="Container Networking Plugins" \
       io.openshift.tags="openshift" \
       maintainer="Doug Smith <dosmith@redhat.com>"
 
-CMD ["webhook"]
+CMD ["/usr/bin/webhook"]

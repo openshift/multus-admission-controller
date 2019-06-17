@@ -12,15 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM golang:1.11
+FROM golang:1.12
 
 ENV PKG_NAME=github.com/K8sNetworkPlumbingWG/net-attach-def-admission-controller
 ENV PKG_PATH=$GOPATH/src/$PKG_NAME
+ENV GO111MODULE=off
 WORKDIR $PKG_PATH
 
-RUN go get github.com/Masterminds/glide
 COPY . $PKG_PATH/
-RUN glide install --strip-vendor
-RUN go install ./...
+RUN ./build.sh
 
-CMD ["webhook"]
+CMD ["./bin/webhook"]
