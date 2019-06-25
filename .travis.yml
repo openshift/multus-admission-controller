@@ -20,6 +20,7 @@ env:
 
 script:
   - make
+  - ./hack/test.sh
   - docker build -f Dockerfile.openshift -t nfvpe/net-attach-def-admission-controller .
 
 deploy:
@@ -31,7 +32,7 @@ deploy:
       docker login -u "$REGISTRY_USER" -p "$REGISTRY_PASS"; 
       docker push nfvpe/net-attach-def-admission-controller; 
       docker push nfvpe/net-attach-def-admission-controller:$TRAVIS_TAG;
-      echo foo'
+      echo done'
     on:
       tags: true
       all_branches: true
@@ -45,7 +46,7 @@ deploy:
       docker tag nfvpe/net-attach-def-admission-controller nfvpe/net-attach-def-admission-controller:snapshot;
       docker login -u "$REGISTRY_USER" -p "$REGISTRY_PASS";
       docker push nfvpe/net-attach-def-admission-controller:snapshot; 
-      echo foo'
+      echo done'
   - provider: script
     on:
       branch: develop
@@ -54,4 +55,4 @@ deploy:
       docker tag nfvpe/net-attach-def-admission-controller nfvpe/net-attach-def-admission-controller:snapshot;
       docker login -u "$REGISTRY_USER" -p "$REGISTRY_PASS";
       docker push nfvpe/net-attach-def-admission-controller:snapshot; 
-      echo foo'
+      echo done'
