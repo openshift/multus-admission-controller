@@ -15,9 +15,14 @@
 package main
 
 import (
+	"context"
+	"crypto/sha512"
+	"encoding/hex"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"net/http"
+	"time"
 
 	"github.com/K8sNetworkPlumbingWG/net-attach-def-admission-controller/pkg/webhook"
 	"github.com/golang/glog"
@@ -37,12 +42,47 @@ func main() {
 	webhook.SetupInClusterClient()
 
 	/* register handlers */
+	var httpServer *http.Server
 	http.HandleFunc("/validate", webhook.ValidateHandler)
 	http.HandleFunc("/isolate", webhook.IsolateHandler)
 
-	/* start serving */
-	err := http.ListenAndServeTLS(fmt.Sprintf("%s:%d", *address, *port), *cert, *key, nil)
-	if err != nil {
-		glog.Fatalf("error starting web server: %s", err.Error())
+	/* start webhook server */
+	go func() {
+		for {
+			httpServer = &http.Server{
+				Addr: fmt.Sprintf("%s:%d", *address, *port),
+			}
+			err := httpServer.ListenAndServeTLS(*cert, *key)
+			if err != nil {
+				if err == http.ErrServerClosed {
+					glog.Info("restarting server")
+					continue
+				} else {
+					glog.Fatalf("error starting web server: %s", err.Error())
+					break
+				}
+			}
+		}
+	}()
+
+	/* watch the cert file and restart http sever if the file updated. */
+	oldHashVal := ""
+	for {
+		hasher := sha512.New()
+		s, err := ioutil.ReadFile(*cert)
+		hasher.Write(s)
+		if err != nil {
+			glog.Fatalf("failed to read file %s: %s", *cert, err)
+		}
+		newHashVal := hex.EncodeToString(hasher.Sum(nil))
+		if oldHashVal != "" && newHashVal != oldHashVal {
+			glog.Info("get cert file update")
+			if err := httpServer.Shutdown(context.Background()); err != nil {
+				glog.Fatalf("http server shutdown: %v", err)
+			}
+		}
+		oldHashVal = newHashVal
+
+		time.Sleep(1 * time.Second)
 	}
 }
