@@ -8,18 +8,26 @@ make
 ```
 
 ## Deploying webhook application
-Create Service Account for net-attach-def-admission-controller webhook and webhook installer and apply RBAC rules to created account:
+Create ssl certificate file which is used for admission controller:
 ```
-kubectl apply -f deployments/rbac.yaml
+./hack/webhook-create-signed-cert.sh
 ```
 
-Next step runs Kubernetes Job which creates all resources required to run webhook:
+*Note: If you want to use non-self-signed certificate, you just create secret resource as following command (the secret CSR is approbed by Kubernetes as the [Kubernetes document](https://kubernetes.io/docs/tasks/tls/managing-tls-in-a-cluster/#create-a-certificate-signing-request-object-to-send-to-the-kubernetes-api)):
+```
+kubectl create secret generic net-attach-def-admission-controller-secret \
+        --from-file=key.pem=<your server-key.pem> \
+        --from-file=cert.pem=<your server-cert.pem> \
+        -n kube-system 
+```
+
+Next step runs Kubernetes Job which creates the following resources required to run webhook:
 * validating webhook configuration
-* secret containing TLS key and certificate
 * service to expose webhook deployment to the API server
 Execute command:
 ```
-kubectl apply -f deployments/install.yaml
+cat deployments/webhook.yaml | ./hack/webhook-patch-ca-bundle.sh | kubectl create -f -
+kubectl apply -f deployments/service.yaml
 ```
 *Note: Verify that Kubernetes controller manager has --cluster-signing-cert-file and --cluster-signing-key-file parameters set to paths to your CA keypair
 to make sure that Certificates API is enabled in order to generate certificate signed by cluster CA.
@@ -29,7 +37,7 @@ If Job has succesfully completed, you can run the actual webhook application.
 
 Create webhook server Deployment:
 ```
-kubectl apply -f deployments/server.yaml
+kubectl apply -f deployments/deployment.yaml
 ```
 
 ## Verifying that validating webhook works
