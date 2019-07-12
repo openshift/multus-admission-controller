@@ -15,13 +15,15 @@
 package main
 
 import (
-	"context"
-	"crypto/sha512"
+        "crypto/sha512"
+        "crypto/tls"
 	"encoding/hex"
 	"flag"
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"os"
+	"syscall"
 	"time"
 
 	"github.com/K8sNetworkPlumbingWG/net-attach-def-admission-controller/pkg/webhook"
@@ -38,30 +40,36 @@ func main() {
 
 	glog.Infof("starting net-attach-def-admission-controller webhook server")
 
+	keyPair, err := webhook.NewTlsKeypairReloader(*cert, *key)
+	if err != nil {
+		glog.Fatalf("error load certificate: %s", err.Error())
+	}
+
+	proc, err := os.FindProcess(os.Getpid())
+	if err != nil {
+		glog.Fatalf("error to get process info: %s", err.Error())
+	}
+
 	/* init API client */
 	webhook.SetupInClusterClient()
 
-	/* register handlers */
-	var httpServer *http.Server
-	http.HandleFunc("/validate", webhook.ValidateHandler)
-	http.HandleFunc("/isolate", webhook.IsolateHandler)
-
-	/* start webhook server */
 	go func() {
-		for {
-			httpServer = &http.Server{
-				Addr: fmt.Sprintf("%s:%d", *address, *port),
-			}
-			err := httpServer.ListenAndServeTLS(*cert, *key)
-			if err != nil {
-				if err == http.ErrServerClosed {
-					glog.Info("restarting server")
-					continue
-				} else {
-					glog.Fatalf("error starting web server: %s", err.Error())
-					break
-				}
-			}
+		/* register handlers */
+		var httpServer *http.Server
+		http.HandleFunc("/validate", webhook.ValidateHandler)
+		http.HandleFunc("/isolate", webhook.IsolateHandler)
+
+		/* start serving */
+		httpServer = &http.Server{
+			Addr: fmt.Sprintf("%s:%d", *address, *port),
+			TLSConfig: &tls.Config{
+				GetCertificate: keyPair.GetCertificateFunc(),
+			},
+		}
+
+		err := httpServer.ListenAndServeTLS(*cert, *key)
+		if err != nil {
+			glog.Fatalf("error starting web server: %v", err)
 		}
 	}()
 
@@ -72,13 +80,12 @@ func main() {
 		s, err := ioutil.ReadFile(*cert)
 		hasher.Write(s)
 		if err != nil {
-			glog.Fatalf("failed to read file %s: %s", *cert, err)
+			glog.Fatalf("failed to read file %s: %v", *cert, err)
 		}
 		newHashVal := hex.EncodeToString(hasher.Sum(nil))
 		if oldHashVal != "" && newHashVal != oldHashVal {
-			glog.Info("get cert file update")
-			if err := httpServer.Shutdown(context.Background()); err != nil {
-				glog.Fatalf("http server shutdown: %v", err)
+			if err := proc.Signal(syscall.SIGHUP); err != nil {
+				glog.Fatalf("failed to send certificate update notification: %v", err)
 			}
 		}
 		oldHashVal = newHashVal
