@@ -15,9 +15,16 @@
 package main
 
 import (
+	"crypto/sha512"
+	"crypto/tls"
+	"encoding/hex"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"net/http"
+	"os"
+	"syscall"
+	"time"
 
 	"github.com/K8sNetworkPlumbingWG/net-attach-def-admission-controller/pkg/webhook"
 	"github.com/golang/glog"
@@ -33,16 +40,56 @@ func main() {
 
 	glog.Infof("starting net-attach-def-admission-controller webhook server")
 
+	keyPair, err := webhook.NewTlsKeypairReloader(*cert, *key)
+	if err != nil {
+		glog.Fatalf("error load certificate: %s", err.Error())
+	}
+
+	proc, err := os.FindProcess(os.Getpid())
+	if err != nil {
+		glog.Fatalf("error to get process info: %s", err.Error())
+	}
+
 	/* init API client */
 	webhook.SetupInClusterClient()
 
-	/* register handlers */
-	http.HandleFunc("/validate", webhook.ValidateHandler)
-	http.HandleFunc("/isolate", webhook.IsolateHandler)
+	go func() {
+		/* register handlers */
+		var httpServer *http.Server
+		http.HandleFunc("/validate", webhook.ValidateHandler)
+		http.HandleFunc("/isolate", webhook.IsolateHandler)
 
-	/* start serving */
-	err := http.ListenAndServeTLS(fmt.Sprintf("%s:%d", *address, *port), *cert, *key, nil)
-	if err != nil {
-		glog.Fatalf("error starting web server: %s", err.Error())
+		/* start serving */
+		httpServer = &http.Server{
+			Addr: fmt.Sprintf("%s:%d", *address, *port),
+			TLSConfig: &tls.Config{
+				GetCertificate: keyPair.GetCertificateFunc(),
+			},
+		}
+
+		err := httpServer.ListenAndServeTLS(*cert, *key)
+		if err != nil {
+			glog.Fatalf("error starting web server: %v", err)
+		}
+	}()
+
+	/* watch the cert file and restart http sever if the file updated. */
+	oldHashVal := ""
+	for {
+		hasher := sha512.New()
+		s, err := ioutil.ReadFile(*cert)
+		hasher.Write(s)
+		if err != nil {
+			glog.Fatalf("failed to read file %s: %v", *cert, err)
+		}
+		newHashVal := hex.EncodeToString(hasher.Sum(nil))
+		if oldHashVal != "" && newHashVal != oldHashVal {
+			if err := proc.Signal(syscall.SIGHUP); err != nil {
+				glog.Fatalf("failed to send certificate update notification: %v", err)
+			}
+		}
+		oldHashVal = newHashVal
+
+		time.Sleep(1 * time.Second)
 	}
 }
