@@ -30,7 +30,7 @@ spec:
       - name: net-attach-def-admission-controller
         image: nfvpe/net-attach-def-admission-controller:snapshot
         command:
-        - webhook
+        - ./bin/webhook
         args:
         - -bind-address=0.0.0.0
         - -port=443
@@ -41,8 +41,7 @@ spec:
         - name: webhook-certs
           mountPath: /etc/webhook
           readOnly: True
-        imagePullPolicy: Always
-        #imagePullPolicy: IfNotPresent
+        imagePullPolicy: IfNotPresent
       volumes:
       - name: webhook-certs
         secret:
