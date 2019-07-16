@@ -67,7 +67,7 @@ func main() {
 			},
 		}
 
-		err := httpServer.ListenAndServeTLS(*cert, *key)
+		err := httpServer.ListenAndServeTLS("", "")
 		if err != nil {
 			glog.Fatalf("error starting web server: %v", err)
 		}
