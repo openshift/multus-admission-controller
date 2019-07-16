@@ -15,8 +15,8 @@
 package main
 
 import (
-        "crypto/sha512"
-        "crypto/tls"
+	"crypto/sha512"
+	"crypto/tls"
 	"encoding/hex"
 	"flag"
 	"fmt"
@@ -67,7 +67,7 @@ func main() {
 			},
 		}
 
-		err := httpServer.ListenAndServeTLS(*cert, *key)
+		err := httpServer.ListenAndServeTLS("", "")
 		if err != nil {
 			glog.Fatalf("error starting web server: %v", err)
 		}
