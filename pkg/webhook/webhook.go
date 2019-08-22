@@ -66,27 +66,28 @@ func validateNetworkAttachmentDefinition(netAttachDef types.NetworkAttachmentDef
 		return false, err
 	}
 
-	if netAttachDef.Spec.Config == "" {
-		err := errors.New("network config is empty")
-		glog.Info(err)
-		return false, err
-	}
-
 	glog.Infof("validating network config spec: %s", netAttachDef.Spec.Config)
 
-	/* try to unmarshal config into NetworkConfig or NetworkConfigList
-	   using actual code from libcni - if succesful, it means that the config
-	   will be accepted by CNI itself as well */
-	confBytes := []byte(netAttachDef.Spec.Config)
-	_, err = libcni.ConfListFromBytes(confBytes)
-	if err != nil {
-		glog.Infof("spec is not a valid network config list: %s - trying to parse into standalone config", err)
-		_, err = libcni.ConfFromBytes(confBytes)
+	var confBytes []byte
+	if netAttachDef.Spec.Config != "" {
+
+		// try to unmarshal config into NetworkConfig or NetworkConfigList
+		//  using actual code from libcni - if succesful, it means that the config
+		//  will be accepted by CNI itself as well
+		confBytes = []byte(netAttachDef.Spec.Config)
+		_, err = libcni.ConfListFromBytes(confBytes)
 		if err != nil {
-			glog.Infof("spec is not a valid network config: %s", confBytes)
-			err := errors.Wrap(err, "invalid config")
-			return false, err
+			glog.Infof("spec is not a valid network config list: %s - trying to parse into standalone config", err)
+			_, err = libcni.ConfFromBytes(confBytes)
+			if err != nil {
+				glog.Infof("spec is not a valid network config: %s", confBytes)
+				err := errors.Wrap(err, "invalid config")
+				return false, err
+			}
 		}
+
+	} else {
+		glog.Infof("Allowing empty spec.config")
 	}
 
 	glog.Infof("AdmissionReview request allowed: Network Attachment Definition '%s' is valid", confBytes)
