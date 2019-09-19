@@ -25,6 +25,7 @@ import (
 	"github.com/containernetworking/cni/libcni"
 	"github.com/golang/glog"
 	"github.com/intel/multus-cni/types"
+	netv1 "github.com/k8snetworkplumbingwg/network-attachment-definition-client/pkg/apis/k8s.cni.cncf.io/v1"
 	"github.com/pkg/errors"
 
 	"k8s.io/api/admission/v1beta1"
@@ -52,9 +53,9 @@ var (
 	clientset kubernetes.Interface
 )
 
-func validateNetworkAttachmentDefinition(netAttachDef types.NetworkAttachmentDefinition) (bool, error) {
+func validateNetworkAttachmentDefinition(netAttachDef netv1.NetworkAttachmentDefinition) (bool, error) {
 	nameRegex := `^[a-z-1-9]([-a-z0-9]*[a-z0-9])?$`
-	isNameCorrect, err := regexp.MatchString(nameRegex, netAttachDef.Metadata.Name)
+	isNameCorrect, err := regexp.MatchString(nameRegex, netAttachDef.GetName())
 	if !isNameCorrect {
 		err := errors.New("net-attach-def name is invalid")
 		glog.Info(err)
@@ -286,9 +287,9 @@ func parsePodNetworkObjectName(podnetwork string) (string, string, string, error
 	return netNsName, networkName, netIfName, nil
 }
 
-func deserializeNetworkAttachmentDefinition(ar *v1beta1.AdmissionReview) (types.NetworkAttachmentDefinition, error) {
+func deserializeNetworkAttachmentDefinition(ar *v1beta1.AdmissionReview) (netv1.NetworkAttachmentDefinition, error) {
 	/* unmarshal NetworkAttachmentDefinition from AdmissionReview request */
-	netAttachDef := types.NetworkAttachmentDefinition{}
+	netAttachDef := netv1.NetworkAttachmentDefinition{}
 	err := json.Unmarshal(ar.Request.Object.Raw, &netAttachDef)
 	return netAttachDef, err
 }

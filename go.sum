@@ -27,6 +27,8 @@ github.com/intel/multus-cni v0.0.0-20180818113950-86af6ab69fe2 h1:pciCUnYEV2G1hG
 github.com/intel/multus-cni v0.0.0-20180818113950-86af6ab69fe2/go.mod h1:2ahsnpJZKm2aK2T5+n3DXbUPKntm42YNc7HqmT8wVgo=
 github.com/json-iterator/go v0.0.0-20180612202835-f2b4162afba3 h1:/UewZcckqhvnnS0C6r3Sher2hSEbVmM6Ogpcjen08+Y=
 github.com/json-iterator/go v0.0.0-20180612202835-f2b4162afba3/go.mod h1:+SdeFBvtyEkXs7REEP0seUULqWtbJapLOCVDaaPEHmU=
+github.com/k8snetworkplumbingwg/network-attachment-definition-client v0.0.0-20181121151021-386d141f4c94 h1:ENvy+DCHKC11634NMOwqjzryOqaNCSsLMjO5xMcxoCA=
+github.com/k8snetworkplumbingwg/network-attachment-definition-client v0.0.0-20181121151021-386d141f4c94/go.mod h1:b9S5QMGDYh+GhoIlY/2ADELIEWUAyqIn1+k7PLq2NCY=
 github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd h1:TRLaZ9cD/w8PVh93nsPXa1VrQ6jlwL5oN8l14QlcNfg=
 github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd/go.mod h1:6dJC0mAP4ikYIbvyc7fijjWJddQyLn8Ig3JB5CqoB9Q=
 github.com/modern-go/reflect2 v0.0.0-20180320133207-05fbef0ca5da h1:ZQGIPjr1iTtUPXZFk8WShqb5G+Qg65VHFLtSvmHh+Mw=
