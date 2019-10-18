@@ -10,7 +10,9 @@ require (
 	github.com/onsi/ginkgo v1.10.1
 	github.com/onsi/gomega v1.7.0
 	github.com/pkg/errors v0.8.1
-	k8s.io/api v0.0.0-20181115043458-b799cb063522
-	k8s.io/apimachinery v0.0.0-20181110190943-2a7c93004028
-	k8s.io/client-go v0.0.0-20181115111358-9bea17718df8
+	github.com/prometheus/client_golang v1.2.1
+	k8s.io/api v0.0.0-20190918195907-bd6ac527cfd2
+	k8s.io/apimachinery v0.0.0-20190817020851-f2f3a405f61d
+	k8s.io/client-go v0.0.0-20190918200256-06eb1244587a
+	sigs.k8s.io/controller-runtime v0.3.0
 )
