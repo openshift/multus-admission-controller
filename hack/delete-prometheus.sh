@@ -1,6 +1,6 @@
 NAMESPACE="kube-system"
-PROMETHEUS_NAMESPACE="my-prometheus"
 BASE_DIR=$(cd $(dirname $0)/..; pwd)
+PROMETHEUS_NAMESPACE="my-prometheus"
 
 
 # Give help text for parameters.
@@ -9,6 +9,8 @@ function usage()
     echo -e "./delete-deployment.sh "
     echo -e "\t-h --help"
     echo -e "\t--namespace=${NAMESPACE}"
+    echo -e "\t Namespace is where the pod was created. Prometheus was by default installed under my-prometheus namespace"
+    
 }
 
 
@@ -21,7 +23,7 @@ while [ "$1" != "" ]; do
             usage
             exit
             ;;
-	--namespace)
+    --namespace)
             NAMESPACE=$VALUE
             ;;
 	*)
@@ -32,23 +34,26 @@ while [ "$1" != "" ]; do
     esac
     shift
 done
+export NAMESPACE
+echo "Delete Prometheus operator"
 
-kubectl -n ${NAMESPACE} delete -f ${BASE_DIR}/deployments/service.yaml
+cat ${BASE_DIR}/deployments/prometheus.yaml | \
+	sed -e "s|\${NAMESPACE}|${NAMESPACE}|g" | \
+	kubectl -n ${PROMETHEUS_NAMESPACE} delete -f -
 
-cat ${BASE_DIR}/deployments/webhook.yaml | \
-	${BASE_DIR}/hack/webhook-patch-ca-bundle.sh | \
-    sed -e "s|\${NAMESPACE}|${NAMESPACE}|g" | \
-	kubectl -n ${NAMESPACE} delete -f -
 
 cat ${BASE_DIR}/deployments/prometheus-roles.yaml | \
 	sed -e "s|\${NAMESPACE}|${NAMESPACE}|g" | \
     sed -e "s|\${PROMETHEUS_NAMESPACE}|${PROMETHEUS_NAMESPACE}|g" | \
 	kubectl -n ${NAMESPACE} delete -f -
 
-kubectl -n ${NAMESPACE} delete -f ${BASE_DIR}/deployments/deployment.yaml
-kubectl -n ${NAMESPACE} delete -f ${BASE_DIR}/deployments/roles.yaml
+
+kubectl delete subs my-prometheus --wait -n ${PROMETHEUS_NAMESPACE} > /dev/null 2>&1
+kubectl delete operatorgroup operatorgroup --wait -n $PROMETHEUS_NAMESPACE --all > /dev/null 2>&1
+kubectl delete pod,configmap,deployment,secret,sts --wait -n ${PROMETHEUS_NAMESPACE} --all > /dev/null 2>&1
+kubectl delete namespace --wait ${PROMETHEUS_NAMESPACE} > /dev/null 2>&1
 
 
 
 
-
+#

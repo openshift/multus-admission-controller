@@ -26,14 +26,26 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/K8sNetworkPlumbingWG/net-attach-def-admission-controller/pkg/controller"
+	"github.com/K8sNetworkPlumbingWG/net-attach-def-admission-controller/pkg/localmetrics"
 	"github.com/K8sNetworkPlumbingWG/net-attach-def-admission-controller/pkg/webhook"
 	"github.com/golang/glog"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	utilwait "k8s.io/apimachinery/pkg/util/wait"
+)
+
+const (
+	metricsPath = "/metrics"
+	healthzPath = "/healthz"
 )
 
 func main() {
 	/* load configuration */
 	port := flag.Int("port", 443, "The port on which to serve.")
 	address := flag.String("bind-address", "0.0.0.0", "The IP address on which to listen for the --port port.")
+	metricsAddress := flag.String("metrics-listen-address", ":9091", "metrics server listen address.")
 	cert := flag.String("tls-cert-file", "cert.pem", "File containing the default x509 Certificate for HTTPS.")
 	key := flag.String("tls-private-key-file", "key.pem", "File containing the default x509 private key matching --tls-cert-file.")
 	flag.Parse()
@@ -50,13 +62,27 @@ func main() {
 		glog.Fatalf("error to get process info: %s", err.Error())
 	}
 
+	// Register metrics
+	prometheus.MustRegister(localmetrics.NetDefAttachInstanceCounter)
+	prometheus.MustRegister(localmetrics.NetDefAttachEnabledInstanceUp)
+
+	// Including these stats kills performance when Prometheus polls with multiple targets
+	prometheus.Unregister(prometheus.NewProcessCollector(prometheus.ProcessCollectorOpts{}))
+	prometheus.Unregister(prometheus.NewGoCollector())
+
 	/* init API client */
 	webhook.SetupInClusterClient()
+	// start metrics sever
+	startHTTPMetricServer(*metricsAddress)
+
+	//Start watching for pod creations
+	go controller.StartWatching()
 
 	go func() {
 		/* register handlers */
 		var httpServer *http.Server
 		http.HandleFunc("/validate", webhook.ValidateHandler)
+
 		http.HandleFunc("/isolate", webhook.IsolateHandler)
 
 		/* start serving */
@@ -92,4 +118,37 @@ func main() {
 
 		time.Sleep(1 * time.Second)
 	}
+
+}
+
+func startHTTPMetricServer(metricsAddress string) {
+	mux := http.NewServeMux()
+	mux.Handle(metricsPath, promhttp.Handler())
+
+	// Add healthzPath
+	mux.HandleFunc(healthzPath, func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(http.StatusText(http.StatusOK)))
+	})
+	// Add index
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte(`<html>
+		 <head><title>Net Attach Definition Admission Controller Metrics Server</title></head>
+		 <body>
+		 <h1>Kube Metrics</h1>
+		 <ul>
+		 <li><a href='` + metricsPath + `'>metrics</a></li>
+		 <li><a href='` + healthzPath + `'>healthz</a></li>
+		 </ul>
+		 </body>
+		 </html>`))
+	})
+
+	go utilwait.Until(func() {
+		err := http.ListenAndServe(metricsAddress, mux)
+		if err != nil {
+			utilruntime.HandleError(fmt.Errorf("starting metrics server failed: %v", err))
+		}
+	}, 5*time.Second, utilwait.NeverStop)
+
 }
