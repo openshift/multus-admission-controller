@@ -14,7 +14,7 @@
 
 FROM golang:1.12
 
-ENV PKG_NAME=github.com/K8sNetworkPlumbingWG/net-attach-def-admission-controller
+ENV PKG_NAME=github.com/k8snetworkplumbingwg/net-attach-def-admission-controller
 ENV PKG_PATH=$GOPATH/src/$PKG_NAME
 ENV GO111MODULE=off
 WORKDIR $PKG_PATH

@@ -26,10 +26,10 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/K8sNetworkPlumbingWG/net-attach-def-admission-controller/pkg/controller"
-	"github.com/K8sNetworkPlumbingWG/net-attach-def-admission-controller/pkg/localmetrics"
-	"github.com/K8sNetworkPlumbingWG/net-attach-def-admission-controller/pkg/webhook"
 	"github.com/golang/glog"
+	"github.com/k8snetworkplumbingwg/net-attach-def-admission-controller/pkg/controller"
+	"github.com/k8snetworkplumbingwg/net-attach-def-admission-controller/pkg/localmetrics"
+	"github.com/k8snetworkplumbingwg/net-attach-def-admission-controller/pkg/webhook"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"

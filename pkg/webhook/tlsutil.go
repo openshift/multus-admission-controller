@@ -25,10 +25,10 @@ import (
 )
 
 type tlsKeypairReloader struct {
-	certMutex	sync.RWMutex
-	cert	*tls.Certificate
-	certPath string
-	keyPath string
+	certMutex sync.RWMutex
+	cert      *tls.Certificate
+	certPath  string
+	keyPath   string
 }
 
 func (keyPair *tlsKeypairReloader) maybeReload() error {
@@ -44,17 +44,17 @@ func (keyPair *tlsKeypairReloader) maybeReload() error {
 }
 
 func (keyPair *tlsKeypairReloader) GetCertificateFunc() func(*tls.ClientHelloInfo) (*tls.Certificate, error) {
-        return func(clientHello *tls.ClientHelloInfo) (*tls.Certificate, error) {
-                keyPair.certMutex.RLock()
-                defer keyPair.certMutex.RUnlock()
-                return keyPair.cert, nil
-        }
+	return func(clientHello *tls.ClientHelloInfo) (*tls.Certificate, error) {
+		keyPair.certMutex.RLock()
+		defer keyPair.certMutex.RUnlock()
+		return keyPair.cert, nil
+	}
 }
 
 func NewTlsKeypairReloader(certPath, keyPath string) (*tlsKeypairReloader, error) {
 	result := &tlsKeypairReloader{
 		certPath: certPath,
-		keyPath: keyPath,
+		keyPath:  keyPath,
 	}
 	cert, err := tls.LoadX509KeyPair(certPath, keyPath)
 	if err != nil {

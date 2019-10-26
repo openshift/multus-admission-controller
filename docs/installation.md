@@ -3,7 +3,7 @@
 ## Building Docker image
 Go to the root directory of net-attach-def-admission-controller and execute:
 ```
-cd $GOPATH/src/github.com/K8sNetworkPlumbingWG/net-attach-def-admission-controller
+cd $GOPATH/src/github.com/k8snetworkplumbingwg/net-attach-def-admission-controller
 make
 ```
 
