@@ -82,7 +82,6 @@ func main() {
 		/* register handlers */
 		var httpServer *http.Server
 		http.HandleFunc("/validate", webhook.ValidateHandler)
-
 		http.HandleFunc("/isolate", webhook.IsolateHandler)
 
 		/* start serving */

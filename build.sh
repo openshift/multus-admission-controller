@@ -32,6 +32,6 @@ else
         export GO111MODULE=on
 
         echo "Building admission controller"
-        go build -o ${DEST_DIR}/webhook -tags no_openssl -ldflags "${LDFLAGS}" "$@" ./cmd/webhook
+        go build -o ${DEST_DIR}/webhook -ldflags "${LDFLAGS}" "$@" ./cmd/webhook
 fi
 # go install ./...
