@@ -20,6 +20,7 @@ env:
 
 script:
   - make
+  - ./hack/test.sh
   - docker build -f Dockerfile.openshift -t nfvpe/net-attach-def-admission-controller .
 
 deploy:

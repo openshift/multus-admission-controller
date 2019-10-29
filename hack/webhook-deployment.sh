@@ -6,6 +6,7 @@ set -e
 # Set our known directories and parameters.
 BASE_DIR=$(cd $(dirname $0)/..; pwd)
 NAMESPACE="kube-system"
+PROMETHEUS_NAMESPACE="my-prometheus"
 INSTALL_SELF_SIGNED_CERT=true
 
 # Give help text for parameters.
@@ -16,8 +17,6 @@ function usage()
     echo -e "\t--install-self-signed-cert=${INSTALL_SELF_SIGNED_CERT}"
     echo -e "\t--namespace=${NAMESPACE}"
 }
-
-
 # Parse parameters given as arguments to this script.
 while [ "$1" != "" ]; do
     PARAM=`echo $1 | awk -F= '{print $1}'`
@@ -53,4 +52,14 @@ cat ${BASE_DIR}/deployments/webhook.yaml | \
 	sed -e "s|\${NAMESPACE}|${NAMESPACE}|g" | \
 	kubectl -n ${NAMESPACE} create -f -
 
+kubectl -n ${NAMESPACE} create -f ${BASE_DIR}/deployments/roles.yaml
 kubectl -n ${NAMESPACE} create -f ${BASE_DIR}/deployments/deployment.yaml
+
+sleep 5
+if [[ "$(kubectl get pod -l k8s-app=prometheus-operator -n ${PROMETHEUS_NAMESPACE} | grep -o prometheus-operator)" == "prometheus-operator" ]]; then
+cat ${BASE_DIR}/deployments/prometheus-roles.yaml | \
+	sed -e "s|\${NAMESPACE}|${NAMESPACE}|g" | \
+    sed -e "s|\${PROMETHEUS_NAMESPACE}|${PROMETHEUS_NAMESPACE}|g" | \
+	kubectl -n ${NAMESPACE} apply -f -
+fi
+

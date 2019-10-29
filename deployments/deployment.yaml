@@ -30,19 +30,20 @@ spec:
       - name: net-attach-def-admission-controller
         image: nfvpe/net-attach-def-admission-controller:snapshot
         command:
-        - webhook
+        - ./bin/webhook
         args:
         - -bind-address=0.0.0.0
         - -port=443
         - -tls-private-key-file=/etc/webhook/key.pem
         - -tls-cert-file=/etc/webhook/cert.pem
         - -alsologtostderr=true
+        - -metrics-listen-address=0.0.0.0:9091
         volumeMounts:
         - name: webhook-certs
           mountPath: /etc/webhook
           readOnly: True
-        imagePullPolicy: Always
-        #imagePullPolicy: IfNotPresent
+        imagePullPolicy: IfNotPresent
+      serviceAccountName: net-attach-def-admission-controller-sa
       volumes:
       - name: webhook-certs
         secret:

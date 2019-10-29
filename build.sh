@@ -12,7 +12,7 @@ if [ "$GO111MODULE" == "off" ]; then
         echo "Building admission controller without go module"
         echo "Warning: this will be deprecated in near future so please use go modules!"
 
-	ORG_PATH="github.com/K8sNetworkPlumbingWG"
+	ORG_PATH="github.com/k8snetworkplumbingwg"
 	REPO_PATH="${ORG_PATH}/net-attach-def-admission-controller"
 
 	if [ ! -h gopath/src/${REPO_PATH} ]; then
