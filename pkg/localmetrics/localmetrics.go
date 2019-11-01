@@ -21,54 +21,54 @@ import (
 
 var log = logf.Log.WithName("network-attachment-definition")
 var (
-	netDefInstanceEnabledCount      = 0.0
-	netDefInstanceSriovEnabledCount = 0.0
-	//NetDefAttachInstanceCounter ...  Total no of network attachment definition instance in the cluster
-	NetDefAttachInstanceCounter = prometheus.NewGaugeVec(
+	netAttachDefInstanceEnabledCount      = 0.0
+	netAttachDefInstanceSriovEnabledCount = 0.0
+	//NetAttachDefInstanceCounter ...  Total no of network attachment definition instance in the cluster
+	NetAttachDefInstanceCounter = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Name: "network_attachment_definition_instance_total",
-			Help: "Metric to get total instance using network attachment definition.",
+			Name: "network_attachment_definition_instances",
+			Help: "Metric to get number of instance using network attachment definition in the cluster.",
 		}, []string{"networks"})
-	//NetDefAttachEnabledInstanceUp  ... check if any instance with netattachdef config enabled
-	NetDefAttachEnabledInstanceUp = prometheus.NewGaugeVec(
+	//NetAttachDefEnabledInstanceUp  ... check if any instance with netattachdef config enabled
+	NetAttachDefEnabledInstanceUp = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Name: "network_attachment_definition_enabled_instance_up",
 			Help: "Metric to identify clusters with network attachment definition enabled instances.",
 		}, []string{"networks"})
 )
 
-//UpdateNetDefAttachInstanceMetrics ...
-func UpdateNetDefAttachInstanceMetrics(tp string, val float64) {
+//UpdateNetAttachDefInstanceMetrics ...
+func UpdateNetAttachDefInstanceMetrics(tp string, val float64) {
 
-	NetDefAttachInstanceCounter.With(prometheus.Labels{
+	NetAttachDefInstanceCounter.With(prometheus.Labels{
 		"networks": tp}).Add(val)
 
 	if tp == "sriov" {
-		netDefInstanceSriovEnabledCount += val
-		if netDefInstanceSriovEnabledCount > 0.0 {
-			SetNetDefAttachEnabledInstanceUp(tp, 1.0)
+		netAttachDefInstanceSriovEnabledCount += val
+		if netAttachDefInstanceSriovEnabledCount > 0.0 {
+			SetNetAttachDefEnabledInstanceUp(tp, 1.0)
 		} else {
-			SetNetDefAttachEnabledInstanceUp(tp, 0.0)
+			SetNetAttachDefEnabledInstanceUp(tp, 0.0)
 		}
 	} else if tp == "any" {
-		netDefInstanceEnabledCount += val
-		if netDefInstanceEnabledCount > 0.0 {
-			SetNetDefAttachEnabledInstanceUp(tp, 1.0)
+		netAttachDefInstanceEnabledCount += val
+		if netAttachDefInstanceEnabledCount > 0.0 {
+			SetNetAttachDefEnabledInstanceUp(tp, 1.0)
 		} else {
-			SetNetDefAttachEnabledInstanceUp(tp, 0.0)
+			SetNetAttachDefEnabledInstanceUp(tp, 0.0)
 		}
 	}
 
 }
 
-//SetNetDefAttachEnabledInstanceUp ...
-func SetNetDefAttachEnabledInstanceUp(tp string, val float64) {
-	NetDefAttachEnabledInstanceUp.With(prometheus.Labels{
+//SetNetAttachDefEnabledInstanceUp ...
+func SetNetAttachDefEnabledInstanceUp(tp string, val float64) {
+	NetAttachDefEnabledInstanceUp.With(prometheus.Labels{
 		"networks": tp}).Set(val)
 }
 
-//Initialize ... empty metrics
+//InitMetrics ... empty metrics
 func InitMetrics() {
-	UpdateNetDefAttachInstanceMetrics("any", 0.0)
-	UpdateNetDefAttachInstanceMetrics("sriov", 0.0)
+	UpdateNetAttachDefInstanceMetrics("any", 0.0)
+	UpdateNetAttachDefInstanceMetrics("sriov", 0.0)
 }
