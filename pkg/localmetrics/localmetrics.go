@@ -19,7 +19,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 )
 
-var log = logf.Log.WithName("netdefattachment")
+var log = logf.Log.WithName("network-attachment-definition")
 var (
 	netDefInstanceEnabledCount      = 0.0
 	netDefInstanceSriovEnabledCount = 0.0
@@ -65,4 +65,10 @@ func UpdateNetDefAttachInstanceMetrics(tp string, val float64) {
 func SetNetDefAttachEnabledInstanceUp(tp string, val float64) {
 	NetDefAttachEnabledInstanceUp.With(prometheus.Labels{
 		"networks": tp}).Set(val)
+}
+
+//Initialize ... empty metrics
+func InitMetrics() {
+	UpdateNetDefAttachInstanceMetrics("any", 0.0)
+	UpdateNetDefAttachInstanceMetrics("sriov", 0.0)
 }

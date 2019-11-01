@@ -88,6 +88,8 @@ func StartWatching() {
 	if err != nil {
 		glog.Fatalf("There was error accessing client set for net attach def %v", err)
 	}
+	//Initialize default metrics
+	localmetrics.InitMetrics()
 
 	informer := cache.NewSharedIndexInformer(
 		&cache.ListWatch{
