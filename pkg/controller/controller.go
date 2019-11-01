@@ -320,7 +320,7 @@ func (c *Controller) updateMetrics(newEvent Event, x float64) {
 
 	networks, err := c.parsePodNetworkAnnotation(newEvent.name, newEvent.namespace)
 	if err != nil {
-		localmetrics.UpdateNetDefAttachInstanceMetrics("any", x)
+		localmetrics.UpdateNetAttachDefInstanceMetrics("error", x)
 		glog.Infof("Error reading pod annotation %s", err)
 		return
 	}
@@ -336,17 +336,17 @@ func (c *Controller) updateMetrics(newEvent Event, x float64) {
 	}
 	//unique network types metrics
 	for key := range set {
-		localmetrics.UpdateNetDefAttachInstanceMetrics(key, x)
+		localmetrics.UpdateNetAttachDefInstanceMetrics(key, x)
 	}
 
 	//and mcvlan,bridge=1
 	if len(configTypes) > 1 {
 		sort.Strings(configTypes)
 		joinedTypes := strings.Join(configTypes, ",")
-		localmetrics.UpdateNetDefAttachInstanceMetrics(joinedTypes, x)
+		localmetrics.UpdateNetAttachDefInstanceMetrics(joinedTypes, x)
 	}
 	//metrics for any combinations
-	localmetrics.UpdateNetDefAttachInstanceMetrics("any", x)
+	localmetrics.UpdateNetAttachDefInstanceMetrics("any", x)
 
 }
 

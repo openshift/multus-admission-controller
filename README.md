@@ -63,8 +63,7 @@ networkattachmentdefinition.k8s.cni.cncf.io/macvlan-conf created
 ## Collecting metrics with Prometheus
 Network attachment definition admission controller comes with following metrics.
   1. No. of instances with k8s.v1.cni.cncf.io/networks annotations 
-  2. No. of valid networkattachmentdefinition custom resource created.
-  3. Any instance with k8s.v1.cni.cncf.io/networks annotation exists.
+  2. Is cluster enabled with instances annotated with k8s.v1.cni.cncf.io/networks.
 
 To install Prometheus and enable scraping the endpoints , execute `./hack/prometheus-deployment.sh` 
 
