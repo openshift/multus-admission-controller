@@ -63,8 +63,8 @@ func main() {
 	}
 
 	// Register metrics
-	prometheus.MustRegister(localmetrics.NetDefAttachInstanceCounter)
-	prometheus.MustRegister(localmetrics.NetDefAttachEnabledInstanceUp)
+	prometheus.MustRegister(localmetrics.NetAttachDefInstanceCounter)
+	prometheus.MustRegister(localmetrics.NetAttachDefEnabledInstanceUp)
 
 	// Including these stats kills performance when Prometheus polls with multiple targets
 	prometheus.Unregister(prometheus.NewProcessCollector(prometheus.ProcessCollectorOpts{}))

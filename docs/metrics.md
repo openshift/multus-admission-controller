@@ -26,24 +26,24 @@ All these metrics are prefixed with `network_attachment_definition_`
 
 | Name                                                  | Description                                              | Type    |
 |-------------------------------------------------------|----------------------------------------------------------|---------|
-| network_attachment_definition_instance_total          | Total number of pods with k8s.v1.cni.cncf.io/networks configured.   | Gauge |
+| network_attachment_definition_instances          | Number of pods with k8s.v1.cni.cncf.io/networks configured.   | Gauge |
 | network_attachment_definition_enabled_instance_up     | Whether or not a  k8s.v1.cni.cncf.io/networks annotated pods are running.  | Gauge   |
                                                         
 
-`network_attachment_definition_instance_total` -  Counts the number of pod with k8s.v1.cni.cncf.io/networks annotation  and types of networks configured via network attachment definition .  They are grouped by various  network types.
+`network_attachment_definition_instances` -  The number of pod with k8s.v1.cni.cncf.io/networks annotation  and types of networks configured via network attachment definition .  They are grouped by various  network types.
 
 Example 
 ``` 
-network_attachment_definition_instance_total{networks="bridge"} 
+network_attachment_definition_instances{networks="bridge"} 
 //Total count for bridge types of network used by the pods.
 
-network_attachment_definition_instance_total{networks="mcvlan,bridge"} 
+network_attachment_definition_instances{networks="mcvlan,bridge"} 
 //Total count for mcvlan and bridge types of network used by the pods.
 
-network_attachment_definition_instance_total{networks="sriov"}  
+network_attachment_definition_instances{networks="sriov"}  
 // Total count for sriov types of network used by the pods.
 
-network_attachment_definition_instance_total{networks="any"} 
+network_attachment_definition_instances{networks="any"} 
 // Total count for any types of network used by the pods.
 ```
 
