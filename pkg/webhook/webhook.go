@@ -52,6 +52,48 @@ var (
 	clientset kubernetes.Interface
 )
 
+// validateCNIConfig verifies following fields
+// conf: 'type'
+// conflist: 'plugins' and 'type'
+func validateCNIConfig(config []byte) error {
+	var c map[string]interface{}
+	if err := json.Unmarshal(config, &c); err != nil {
+		return err
+	}
+
+	// Identify target is single CNI config or plugins
+	if p, ok := c["plugins"]; ok {
+		// CNI conflist
+		// check 'type' field for each plugin in 'plugins'
+		plugins := p.([]interface{})
+		for _, v := range plugins {
+			plugin := v.(map[string]interface{})
+			if _, ok := plugin["type"]; !ok {
+				return fmt.Errorf("missing 'type' in plugins")
+			}
+		}
+	} else {
+		// single CNI config
+		if _, ok := c["type"]; !ok {
+			return fmt.Errorf("missing 'type' in cni config")
+		}
+	}
+	return nil
+}
+
+// preprocessCNIConfig process CNI config bytes as following (that multus does too)
+// - if 'name' is missing, 'name' is filled
+func preprocessCNIConfig(name string, config []byte) ([]byte, error) {
+	var c map[string]interface{}
+	if err := json.Unmarshal(config, &c); err != nil {
+		if n, ok := c["name"]; !ok || n == "" {
+			c["name"] = name
+		}
+	}
+	configBytes, err := json.Marshal(c)
+	return configBytes, err
+}
+
 func validateNetworkAttachmentDefinition(netAttachDef netv1.NetworkAttachmentDefinition) (bool, error) {
 	nameRegex := `^[a-z-1-9]([-a-z0-9]*[a-z0-9])?$`
 	isNameCorrect, err := regexp.MatchString(nameRegex, netAttachDef.GetName())
@@ -70,11 +112,18 @@ func validateNetworkAttachmentDefinition(netAttachDef netv1.NetworkAttachmentDef
 
 	var confBytes []byte
 	if netAttachDef.Spec.Config != "" {
-
 		// try to unmarshal config into NetworkConfig or NetworkConfigList
 		//  using actual code from libcni - if succesful, it means that the config
 		//  will be accepted by CNI itself as well
-		confBytes = []byte(netAttachDef.Spec.Config)
+		confBytes, err = preprocessCNIConfig(netAttachDef.GetName(), []byte(netAttachDef.Spec.Config))
+		if err != nil {
+			err := errors.Wrap(err, "invalid json")
+			return false, err
+		}
+		if err := validateCNIConfig(confBytes); err != nil {
+			err := errors.Wrap(err, "invalid config")
+			return false, err
+		}
 		_, err = libcni.ConfListFromBytes(confBytes)
 		if err != nil {
 			glog.Infof("spec is not a valid network config list: %s - trying to parse into standalone config", err)
