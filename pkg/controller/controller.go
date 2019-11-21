@@ -34,7 +34,6 @@ import (
 	netattachdefClientset "github.com/k8snetworkplumbingwg/network-attachment-definition-client/pkg/client/clientset/versioned"
 	api_v1 "k8s.io/api/core/v1"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -50,24 +49,26 @@ const (
 	nadPodAnnotation = "k8s.v1.cni.cncf.io/networks"
 )
 
-var serverStartTime time.Time
+type metricAction int
 
-// Event indicate the informerEvent
-type Event struct {
-	key          string
-	namespace    string
-	eventType    string
-	resourceType string
-	name         string
-}
+const (
+	//Add ... add metrics
+	Add metricAction = 1
+	//Delete .... delete metrics
+	Delete metricAction = -1
+	//Reset .... reset metrics
+	Reset        metricAction  = 0
+	resyncPeriod time.Duration = time.Second * 3600 // resync every one hour, default is 10 hour
+	// careful with the CPU load if the period time is too short, but required to catch any missed updates
+	// you can set it to zero for default
+)
 
 // Controller object
 type Controller struct {
-	clientset      kubernetes.Interface
-	queue          workqueue.RateLimitingInterface
-	informer       cache.SharedIndexInformer
-	nadClientset   *netattachdefClientset.Clientset
-	deletedIndexer cache.Indexer
+	clientset    kubernetes.Interface
+	queue        workqueue.RateLimitingInterface
+	informer     cache.SharedIndexInformer
+	nadClientset *netattachdefClientset.Clientset
 }
 
 //StartWatching ...  Start prepares watchers and run their controllers, then waits for process termination signals
@@ -94,20 +95,18 @@ func StartWatching() {
 	informer := cache.NewSharedIndexInformer(
 		&cache.ListWatch{
 			ListFunc: func(options meta_v1.ListOptions) (runtime.Object, error) {
-				return clientset.CoreV1().Pods("").List(options)
+				return clientset.CoreV1().Pods(api_v1.NamespaceAll).List(options)
 			},
 			WatchFunc: func(options meta_v1.ListOptions) (watch.Interface, error) {
-				return clientset.CoreV1().Pods("").Watch(options)
+				return clientset.CoreV1().Pods(api_v1.NamespaceAll).Watch(options)
 			},
 		},
 		&api_v1.Pod{},
-		0, //Skip resync
-		cache.Indexers{},
+		resyncPeriod,
+		cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, // use default indexer
 	)
 
-	deletedIndexer := cache.NewIndexer(cache.DeletionHandlingMetaNamespaceKeyFunc, cache.Indexers{})
-
-	c := newResourceController(clientset, nadClientset, informer, deletedIndexer)
+	c := newResourceController(clientset, nadClientset, informer)
 	stopCh := make(chan struct{})
 	defer close(stopCh)
 	go c.Run(stopCh)
@@ -119,36 +118,45 @@ func StartWatching() {
 }
 
 func newResourceController(client kubernetes.Interface, nadClient *netattachdefClientset.Clientset,
-	informer cache.SharedIndexInformer, deletedIndexer cache.Indexer) *Controller {
+	informer cache.SharedIndexInformer) *Controller {
 	queue := workqueue.NewRateLimitingQueue(workqueue.DefaultControllerRateLimiter())
-	var newEvent Event
-	var err error
+
 	informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			pod := obj.(meta_v1.Object)
-			if name, ok := pod.GetAnnotations()[nadPodAnnotation]; ok {
-				newEvent.key, err = cache.MetaNamespaceKeyFunc(obj)
-				newEvent.namespace, _, err = cache.SplitMetaNamespaceKey(newEvent.key)
-				newEvent.eventType = "create"
-				newEvent.resourceType = "pod"
-				newEvent.name = name
+			if _, ok := pod.GetAnnotations()[nadPodAnnotation]; ok {
+				key, err := cache.MetaNamespaceKeyFunc(obj)
 				if err == nil {
-					queue.Add(newEvent)
-					deletedIndexer.Delete(obj)
+					queue.Add(key)
+				}
+			}
+		},
+		UpdateFunc: func(oldP, newP interface{}) {
+			oldPod := oldP.(meta_v1.Object)
+			newPod := newP.(meta_v1.Object)
+			// Make sure object is not set for deletion and was actually changed
+			if newPod.GetDeletionTimestamp() == nil &&
+				oldPod.GetResourceVersion() != newPod.GetResourceVersion() {
+
+				if _, ok := newPod.GetAnnotations()[nadPodAnnotation]; ok {
+					key, err := cache.MetaNamespaceKeyFunc(newPod)
+					if err == nil {
+						queue.Add(key)
+					}
+				} else if _, ok := oldPod.GetAnnotations()[nadPodAnnotation]; ok { // updated pod and removed the annotations
+					key, err := cache.MetaNamespaceKeyFunc(oldPod)
+					if err == nil {
+						queue.Add(key)
+					}
 				}
 			}
 		},
 		DeleteFunc: func(obj interface{}) {
 			pod := obj.(meta_v1.Object)
-			if name, ok := pod.GetAnnotations()[nadPodAnnotation]; ok {
-				newEvent.key, err = cache.DeletionHandlingMetaNamespaceKeyFunc(obj)
-				newEvent.namespace, _, err = cache.SplitMetaNamespaceKey(newEvent.key)
-				newEvent.eventType = "delete"
-				newEvent.resourceType = "pod"
-				newEvent.name = name
+			if _, ok := pod.GetAnnotations()[nadPodAnnotation]; ok {
+				key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(obj)
 				if err == nil {
-					queue.Add(newEvent)
-					deletedIndexer.Add(obj)
+					queue.Add(key)
 				}
 			}
 
@@ -156,11 +164,10 @@ func newResourceController(client kubernetes.Interface, nadClient *netattachdefC
 	})
 
 	return &Controller{
-		clientset:      client,
-		nadClientset:   nadClient,
-		informer:       informer,
-		queue:          queue,
-		deletedIndexer: deletedIndexer,
+		clientset:    client,
+		nadClientset: nadClient,
+		informer:     informer,
+		queue:        queue,
 	}
 }
 
@@ -170,8 +177,6 @@ func (c *Controller) Run(stopCh <-chan struct{}) {
 	defer c.queue.ShutDown()
 
 	glog.Info("Starting net-attach-def-admission-controller")
-
-	serverStartTime = time.Now().Local()
 
 	go c.informer.Run(stopCh)
 
@@ -213,7 +218,7 @@ func (c *Controller) processNextItem() bool {
 	defer c.queue.Done(key)
 
 	// Invoke the method containing the business logic
-	err := c.processItem(key.(Event))
+	err := c.processItem(key.(string))
 	// Handle the error if something went wrong during the execution of the business logic
 	c.handleErr(err, key)
 	return true
@@ -232,7 +237,7 @@ func (c *Controller) handleErr(err error, key interface{}) {
 
 	// This controller retries 5 times if something goes wrong. After that, it stops trying.
 	if c.queue.NumRequeues(key) < maxRetries {
-		glog.Infof("Error syncing pod %v: %v", key, err)
+		glog.Infof("Error syncing pod %s: %v", key, err)
 		// Re-enqueue the key rate limited. Based on the rate limiter on the
 		// queue and the re-enqueue history, the key will be processed later again.
 		c.queue.AddRateLimited(key)
@@ -245,33 +250,30 @@ func (c *Controller) handleErr(err error, key interface{}) {
 	glog.Infof("Dropping pod %q out of the queue: %v", key, err)
 }
 
-func (c *Controller) processItem(newEvent Event) error {
-	_, _, err := c.informer.GetIndexer().GetByKey(newEvent.key)
+func (c *Controller) processItem(key string) error {
+	obj, exists, err := c.informer.GetIndexer().GetByKey(key)
 	if err != nil {
-		return fmt.Errorf("Error fetching object with key %s from store: %v", newEvent.key, err)
+		return fmt.Errorf("Error fetching object with key %s from store: %v", key, err)
 	}
+	if !exists {
+		return c.updateMetrics(key, "", Delete)
 
-	// process events based on its type
-	switch newEvent.eventType {
-	case "create":
-		// compare CreationTimestamp and serverStartTime and alert only on latest events
-		//but we  want count of old events too
-		c.updateMetrics(newEvent, 1.0)
-		return nil
-	case "delete":
-		if _, exists, err := c.deletedIndexer.GetByKey(newEvent.key); err == nil && exists {
-			c.updateMetrics(newEvent, -1.0)
-			c.deletedIndexer.Delete(newEvent.key)
+	}
+	pod, _ := obj.(*api_v1.Pod)
+	if pod.Status.Phase == api_v1.PodRunning {
+		if name, ok := pod.GetAnnotations()[nadPodAnnotation]; ok {
+			return c.updateMetrics(key, name, Add)
 		}
-
-		return nil
+		//ok if annotation not found delete the metrics.
+		return c.updateMetrics(key, "", Delete)
 	}
+
 	return nil
 }
 
 // find crd by name
 func (c *Controller) getCrdByName(name string, namespace string) (*networkv1.NetworkAttachmentDefinition, error) {
-	netAttachDef, err := c.nadClientset.K8sCniCncfIoV1().NetworkAttachmentDefinitions(namespace).Get(name, metav1.GetOptions{})
+	netAttachDef, err := c.nadClientset.K8sCniCncfIoV1().NetworkAttachmentDefinitions(namespace).Get(name, meta_v1.GetOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("Failed to locate network attachment definition %s/%s", namespace, name)
 	}
@@ -290,11 +292,11 @@ func (c *Controller) getConfigTypes(crd *networkv1.NetworkAttachmentDefinition) 
 		confBytes = []byte(crd.Spec.Config)
 		networkConfigList, err := libcni.ConfListFromBytes(confBytes)
 
-		if err != nil { // if error check for config
-			networkConfi, err := libcni.ConfFromBytes(confBytes)
+		if err != nil { // if no error check for config
+			networkConfig, err := libcni.ConfFromBytes(confBytes)
 			if err == nil {
-				if _, found := set[networkConfi.Network.Type]; !found {
-					set[networkConfi.Network.Type] = struct{}{}
+				if _, found := set[networkConfig.Network.Type]; !found {
+					set[networkConfig.Network.Type] = struct{}{}
 				}
 			}
 		} else {
@@ -308,45 +310,75 @@ func (c *Controller) getConfigTypes(crd *networkv1.NetworkAttachmentDefinition) 
 		for key := range set {
 			configTypes = append(configTypes, key)
 		}
-
 	}
-
 	return configTypes
 }
 
-func (c *Controller) updateMetrics(newEvent Event, x float64) {
+func (c *Controller) updateMetrics(key string, configNames string, action metricAction) error {
 	set := make(map[string]struct{})
 	var configTypes []string
 
-	networks, err := c.parsePodNetworkAnnotation(newEvent.name, newEvent.namespace)
-	if err != nil {
-		localmetrics.UpdateNetAttachDefInstanceMetrics("error", x)
-		glog.Infof("Error reading pod annotation %s", err)
-		return
-	}
-	for _, val := range networks { // create unique list
-		if crd, ok := c.getCrdByName(val.Name, val.Namespace); ok == nil {
-			configTypes = c.getConfigTypes(crd)
-			for _, val := range configTypes {
-				if _, found := set[val]; !found {
-					set[val] = struct{}{}
+	switch action {
+	case Delete:
+		{
+			oldConfigs := localmetrics.GetStoredValue(key)
+			if oldConfigs != "" {
+				configTypes := strings.Split(oldConfigs, ",")
+				if len(configTypes) > 1 {
+					for _, val := range configTypes {
+						localmetrics.UpdateNetAttachDefInstanceMetrics(val, int(action))
+					}
+					// decrement the metrics for old configs
+					localmetrics.UpdateNetAttachDefInstanceMetrics(oldConfigs, int(action))
+				} else {
+					localmetrics.UpdateNetAttachDefInstanceMetrics(configTypes[0], int(action))
 				}
+				localmetrics.UpdateNetAttachDefInstanceMetrics("any", int(action))
+			}
+			localmetrics.SetStoredValue(key, "")
+		}
+	case Add: //create new pod event
+		{
+			//clean up
+			oldConfigs := localmetrics.GetStoredValue(key)
+			if oldConfigs != "" {
+				c.updateMetrics(key, "", Delete)
+			}
+
+			networks, err := c.parsePodNetworkAnnotation(configNames, "default")
+			if err != nil {
+				return fmt.Errorf("Error reading pod annotation %v", err)
+			}
+			for _, val := range networks { // create unique list
+				if crd, ok := c.getCrdByName(val.Name, val.Namespace); ok == nil {
+					for _, val := range c.getConfigTypes(crd) {
+						if _, found := set[val]; !found && val != "" {
+							set[val] = struct{}{}
+							configTypes = append(configTypes, val)
+						}
+					}
+				}
+			}
+			//unique network types metrics
+			for key := range set {
+				localmetrics.UpdateNetAttachDefInstanceMetrics(key, int(action))
+			}
+			//and mcvlan,bridge=1
+			if len(configTypes) > 1 {
+				sort.Strings(configTypes)
+				joinedTypes := strings.Join(configTypes, ",")
+				localmetrics.UpdateNetAttachDefInstanceMetrics(joinedTypes, int(action))
+				localmetrics.SetStoredValue(key, joinedTypes)
+				//metrics for any combinations
+				localmetrics.UpdateNetAttachDefInstanceMetrics("any", int(action))
+			} else if len(configTypes) == 1 {
+				localmetrics.SetStoredValue(key, configTypes[0])
+				//metrics for any combinations
+				localmetrics.UpdateNetAttachDefInstanceMetrics("any", int(action))
 			}
 		}
 	}
-	//unique network types metrics
-	for key := range set {
-		localmetrics.UpdateNetAttachDefInstanceMetrics(key, x)
-	}
-
-	//and mcvlan,bridge=1
-	if len(configTypes) > 1 {
-		sort.Strings(configTypes)
-		joinedTypes := strings.Join(configTypes, ",")
-		localmetrics.UpdateNetAttachDefInstanceMetrics(joinedTypes, x)
-	}
-	//metrics for any combinations
-	localmetrics.UpdateNetAttachDefInstanceMetrics("any", x)
+	return nil
 
 }
 
