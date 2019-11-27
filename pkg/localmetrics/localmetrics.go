@@ -15,14 +15,21 @@
 package localmetrics
 
 import (
+	"github.com/golang/glog"
 	"github.com/prometheus/client_golang/prometheus"
-	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 )
 
-var log = logf.Log.WithName("network-attachment-definition")
+const (
+	metricStoreInitSize int = 330
+	initialMetricsCount int = 0
+	metricsIncVal       int = 1
+)
+
 var (
-	netAttachDefInstanceEnabledCount      = 0.0
-	netAttachDefInstanceSriovEnabledCount = 0.0
+	netAttachDefInstanceEnabledCount      = initialMetricsCount
+	netAttachDefInstanceSriovEnabledCount = initialMetricsCount
+	//Change this when we set metrics per node.
+	objStore = make(map[string]string, metricStoreInitSize) // Preallocate room 110 entires per node*3
 	//NetAttachDefInstanceCounter ...  Total no of network attachment definition instance in the cluster
 	NetAttachDefInstanceCounter = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
@@ -38,37 +45,58 @@ var (
 )
 
 //UpdateNetAttachDefInstanceMetrics ...
-func UpdateNetAttachDefInstanceMetrics(tp string, val float64) {
+func UpdateNetAttachDefInstanceMetrics(tp string, val int) {
 
+	glog.Infof("UPdating net-attach-def metrics for %s with value %d", tp, val)
 	NetAttachDefInstanceCounter.With(prometheus.Labels{
-		"networks": tp}).Add(val)
+		"networks": tp}).Add(float64(val))
 
 	if tp == "sriov" {
 		netAttachDefInstanceSriovEnabledCount += val
-		if netAttachDefInstanceSriovEnabledCount > 0.0 {
-			SetNetAttachDefEnabledInstanceUp(tp, 1.0)
+		if netAttachDefInstanceSriovEnabledCount > initialMetricsCount {
+			SetNetAttachDefEnabledInstanceUp(tp, metricsIncVal)
 		} else {
-			SetNetAttachDefEnabledInstanceUp(tp, 0.0)
+			SetNetAttachDefEnabledInstanceUp(tp, initialMetricsCount)
 		}
 	} else if tp == "any" {
 		netAttachDefInstanceEnabledCount += val
-		if netAttachDefInstanceEnabledCount > 0.0 {
-			SetNetAttachDefEnabledInstanceUp(tp, 1.0)
+		if netAttachDefInstanceEnabledCount > initialMetricsCount {
+			SetNetAttachDefEnabledInstanceUp(tp, metricsIncVal)
 		} else {
-			SetNetAttachDefEnabledInstanceUp(tp, 0.0)
+			SetNetAttachDefEnabledInstanceUp(tp, initialMetricsCount)
 		}
 	}
 
 }
 
 //SetNetAttachDefEnabledInstanceUp ...
-func SetNetAttachDefEnabledInstanceUp(tp string, val float64) {
+func SetNetAttachDefEnabledInstanceUp(tp string, val int) {
 	NetAttachDefEnabledInstanceUp.With(prometheus.Labels{
-		"networks": tp}).Set(val)
+		"networks": tp}).Set(float64(val))
 }
 
 //InitMetrics ... empty metrics
 func InitMetrics() {
-	UpdateNetAttachDefInstanceMetrics("any", 0.0)
-	UpdateNetAttachDefInstanceMetrics("sriov", 0.0)
+	UpdateNetAttachDefInstanceMetrics("any", initialMetricsCount)
+	UpdateNetAttachDefInstanceMetrics("sriov", initialMetricsCount)
+}
+
+//GetStoredValue ... Get stroed config value for pod key
+func GetStoredValue(key string) string {
+	if value, ok := objStore[key]; ok {
+		return value
+	}
+	return ""
+}
+
+//SetStoredValue // set stored key value
+func SetStoredValue(key string, val string) {
+	if val == "" {
+		_, ok := objStore[key]
+		if ok {
+			delete(objStore, key)
+		}
+	} else {
+		objStore[key] = val
+	}
 }
