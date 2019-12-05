@@ -256,16 +256,18 @@ func (c *Controller) processItem(key string) error {
 		return fmt.Errorf("Error fetching object with key %s from store: %v", key, err)
 	}
 	if !exists {
-		return c.updateMetrics(key, "", Delete)
-
+		return c.updateMetrics(key, "", api_v1.NamespaceDefault, Delete)
 	}
+
 	pod, _ := obj.(*api_v1.Pod)
+	namespace := pod.ObjectMeta.Namespace
 	if pod.Status.Phase == api_v1.PodRunning {
+		glog.Infof("Pod found for net-attach-def metrics, processing %s under namespaces %s", key, namespace)
 		if name, ok := pod.GetAnnotations()[nadPodAnnotation]; ok {
-			return c.updateMetrics(key, name, Add)
+			return c.updateMetrics(key, name, namespace, Add)
 		}
 		//ok if annotation not found delete the metrics.
-		return c.updateMetrics(key, "", Delete)
+		return c.updateMetrics(key, "", namespace, Delete)
 	}
 
 	return nil
@@ -314,7 +316,7 @@ func (c *Controller) getConfigTypes(crd *networkv1.NetworkAttachmentDefinition) 
 	return configTypes
 }
 
-func (c *Controller) updateMetrics(key string, configNames string, action metricAction) error {
+func (c *Controller) updateMetrics(key string, configNames string, namespace string, action metricAction) error {
 	set := make(map[string]struct{})
 	var configTypes []string
 
@@ -342,10 +344,10 @@ func (c *Controller) updateMetrics(key string, configNames string, action metric
 			//clean up
 			oldConfigs := localmetrics.GetStoredValue(key)
 			if oldConfigs != "" {
-				c.updateMetrics(key, "", Delete)
+				c.updateMetrics(key, "", namespace, Delete)
 			}
 
-			networks, err := c.parsePodNetworkAnnotation(configNames, "default")
+			networks, err := c.parsePodNetworkAnnotation(configNames, namespace)
 			if err != nil {
 				return fmt.Errorf("Error reading pod annotation %v", err)
 			}
@@ -418,7 +420,6 @@ func (c *Controller) parsePodNetworkAnnotation(podNetworks, defaultNamespace str
 			net.Namespace = defaultNamespace
 		}
 	}
-
 	return networks, nil
 }
 
