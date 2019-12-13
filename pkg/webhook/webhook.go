@@ -94,6 +94,12 @@ func preprocessCNIConfig(name string, config []byte) ([]byte, error) {
 	return configBytes, err
 }
 
+// isJSON detects if a string is in JSON format
+func isJSON(s string) bool {
+	var js map[string]interface{}
+	return json.Unmarshal([]byte(s), &js) == nil
+}
+
 func validateNetworkAttachmentDefinition(netAttachDef netv1.NetworkAttachmentDefinition) (bool, error) {
 	nameRegex := `^[a-z-1-9]([-a-z0-9]*[a-z0-9])?$`
 	isNameCorrect, err := regexp.MatchString(nameRegex, netAttachDef.GetName())
@@ -103,7 +109,7 @@ func validateNetworkAttachmentDefinition(netAttachDef netv1.NetworkAttachmentDef
 		return false, err
 	}
 	if err != nil {
-		err := errors.Wrap(err, "error validating name")
+		err := errors.New("error validating name")
 		glog.Error(err)
 		return false, err
 	}
@@ -115,13 +121,19 @@ func validateNetworkAttachmentDefinition(netAttachDef netv1.NetworkAttachmentDef
 		// try to unmarshal config into NetworkConfig or NetworkConfigList
 		//  using actual code from libcni - if succesful, it means that the config
 		//  will be accepted by CNI itself as well
+		if !isJSON(netAttachDef.Spec.Config) {
+			err := errors.New("configuration string is not in JSON format")
+			glog.Info(err)
+			return false, err
+		}
+
 		confBytes, err = preprocessCNIConfig(netAttachDef.GetName(), []byte(netAttachDef.Spec.Config))
 		if err != nil {
-			err := errors.Wrap(err, "invalid json")
+			err := errors.New("invalid json")
 			return false, err
 		}
 		if err := validateCNIConfig(confBytes); err != nil {
-			err := errors.Wrap(err, "invalid config")
+			err := errors.New("invalid config")
 			return false, err
 		}
 		_, err = libcni.ConfListFromBytes(confBytes)
@@ -130,7 +142,7 @@ func validateNetworkAttachmentDefinition(netAttachDef netv1.NetworkAttachmentDef
 			_, err = libcni.ConfFromBytes(confBytes)
 			if err != nil {
 				glog.Infof("spec is not a valid network config: %s", confBytes)
-				err := errors.Wrap(err, "invalid config")
+				err := errors.New("invalid config")
 				return false, err
 			}
 		}
