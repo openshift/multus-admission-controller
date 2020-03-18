@@ -11,10 +11,14 @@ spec:
   - interval: 30s
     port: metrics
     honorLabels: true
+    scheme: https
+    tlsConfig:
+      insecureSkipVerify: true
+    bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
   selector:
     matchLabels:
       service: net-attach-def-admission-controller-service
-  namespaceSelector: 
+  namespaceSelector:
     matchNames:
       - ${NAMESPACE}
 ---
@@ -25,12 +29,13 @@ metadata:
   labels:
     prometheus: k8s
 spec:
+  replicas: 2
   serviceAccountName: prometheus-k8s
-  serviceMonitorSelector: 
+  serviceMonitorSelector:
     matchExpressions:
     - key : k8s-app
       operator: Exists
-  version: v1.3.0
+  version: v2.15.2
 ---
 apiVersion: v1
 kind: Service

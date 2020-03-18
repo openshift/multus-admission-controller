@@ -6,7 +6,8 @@ set -e
 # Set our known directories and parameters.
 BASE_DIR=$(cd $(dirname $0)/..; pwd)
 NAMESPACE="kube-system"
-PROMETHEUS_NAMESPACE="my-prometheus"
+PROMETHEUS_NAMESPACE="monitoring"
+OPERATOR_NAMESPACE="operators"
 INSTALL_SELF_SIGNED_CERT=true
 
 # Give help text for parameters.
@@ -56,7 +57,7 @@ kubectl -n ${NAMESPACE} create -f ${BASE_DIR}/deployments/roles.yaml
 kubectl -n ${NAMESPACE} create -f ${BASE_DIR}/deployments/deployment.yaml
 
 sleep 5
-if [[ "$(kubectl get pod -l k8s-app=prometheus-operator -n ${PROMETHEUS_NAMESPACE} | grep -o prometheus-operator)" == "prometheus-operator" ]]; then
+if [[ "$(kubectl get pod -l k8s-app=prometheus-operator -n ${OPERATOR_NAMESPACE} | grep -o prometheus-operator)" == "prometheus-operator" ]]; then
 cat ${BASE_DIR}/deployments/prometheus-roles.yaml | \
 	sed -e "s|\${NAMESPACE}|${NAMESPACE}|g" | \
     sed -e "s|\${PROMETHEUS_NAMESPACE}|${PROMETHEUS_NAMESPACE}|g" | \
