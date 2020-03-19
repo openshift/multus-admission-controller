@@ -1,5 +1,5 @@
 NAMESPACE="kube-system"
-PROMETHEUS_NAMESPACE="my-prometheus"
+PROMETHEUS_NAMESPACE="monitoring"
 BASE_DIR=$(cd $(dirname $0)/..; pwd)
 
 
