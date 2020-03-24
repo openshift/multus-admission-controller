@@ -15,14 +15,14 @@
 package invoke
 
 import (
-	"fmt"
+	"context"
 	"os"
 	"path/filepath"
 
 	"github.com/containernetworking/cni/pkg/types"
 )
 
-func delegateAddOrGet(command, delegatePlugin string, netconf []byte, exec Exec) (types.Result, error) {
+func delegateCommon(delegatePlugin string, exec Exec) (string, Exec, error) {
 	if exec == nil {
 		exec = defaultExec
 	}
@@ -30,46 +30,51 @@ func delegateAddOrGet(command, delegatePlugin string, netconf []byte, exec Exec)
 	paths := filepath.SplitList(os.Getenv("CNI_PATH"))
 	pluginPath, err := exec.FindInPath(delegatePlugin, paths)
 	if err != nil {
-		return nil, err
+		return "", nil, err
 	}
 
-	return ExecPluginWithResult(pluginPath, netconf, ArgsFromEnv(), exec)
+	return pluginPath, exec, nil
 }
 
 // DelegateAdd calls the given delegate plugin with the CNI ADD action and
 // JSON configuration
-func DelegateAdd(delegatePlugin string, netconf []byte, exec Exec) (types.Result, error) {
-	if os.Getenv("CNI_COMMAND") != "ADD" {
-		return nil, fmt.Errorf("CNI_COMMAND is not ADD")
+func DelegateAdd(ctx context.Context, delegatePlugin string, netconf []byte, exec Exec) (types.Result, error) {
+	pluginPath, realExec, err := delegateCommon(delegatePlugin, exec)
+	if err != nil {
+		return nil, err
 	}
-	return delegateAddOrGet("ADD", delegatePlugin, netconf, exec)
+
+	// DelegateAdd will override the original "CNI_COMMAND" env from process with ADD
+	return ExecPluginWithResult(ctx, pluginPath, netconf, delegateArgs("ADD"), realExec)
 }
 
-// DelegateGet calls the given delegate plugin with the CNI GET action and
+// DelegateCheck calls the given delegate plugin with the CNI CHECK action and
 // JSON configuration
-func DelegateGet(delegatePlugin string, netconf []byte, exec Exec) (types.Result, error) {
-	if os.Getenv("CNI_COMMAND") != "GET" {
-		return nil, fmt.Errorf("CNI_COMMAND is not GET")
-	}
-	return delegateAddOrGet("GET", delegatePlugin, netconf, exec)
-}
-
-// DelegateDel calls the given delegate plugin with the CNI DEL action and
-// JSON configuration
-func DelegateDel(delegatePlugin string, netconf []byte, exec Exec) error {
-	if exec == nil {
-		exec = defaultExec
-	}
-
-	if os.Getenv("CNI_COMMAND") != "DEL" {
-		return fmt.Errorf("CNI_COMMAND is not DEL")
-	}
-
-	paths := filepath.SplitList(os.Getenv("CNI_PATH"))
-	pluginPath, err := exec.FindInPath(delegatePlugin, paths)
+func DelegateCheck(ctx context.Context, delegatePlugin string, netconf []byte, exec Exec) error {
+	pluginPath, realExec, err := delegateCommon(delegatePlugin, exec)
 	if err != nil {
 		return err
 	}
 
-	return ExecPluginWithoutResult(pluginPath, netconf, ArgsFromEnv(), exec)
+	// DelegateCheck will override the original CNI_COMMAND env from process with CHECK
+	return ExecPluginWithoutResult(ctx, pluginPath, netconf, delegateArgs("CHECK"), realExec)
+}
+
+// DelegateDel calls the given delegate plugin with the CNI DEL action and
+// JSON configuration
+func DelegateDel(ctx context.Context, delegatePlugin string, netconf []byte, exec Exec) error {
+	pluginPath, realExec, err := delegateCommon(delegatePlugin, exec)
+	if err != nil {
+		return err
+	}
+
+	// DelegateDel will override the original CNI_COMMAND env from process with DEL
+	return ExecPluginWithoutResult(ctx, pluginPath, netconf, delegateArgs("DEL"), realExec)
+}
+
+// return CNIArgs used by delegation
+func delegateArgs(action string) *DelegateArgs {
+	return &DelegateArgs{
+		Command: action,
+	}
 }
