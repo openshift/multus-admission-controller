@@ -16,3 +16,5 @@ approvers:
   - s1061123
   - jeremyeder
   - aneeshkp
+component: "Networking"
+subcomponent: "multus"
