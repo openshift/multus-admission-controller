@@ -26,8 +26,9 @@ const (
 )
 
 var (
-	netAttachDefInstanceEnabledCount      = initialMetricsCount
-	netAttachDefInstanceSriovEnabledCount = initialMetricsCount
+	netAttachDefInstanceEnabledCount        = initialMetricsCount
+	netAttachDefInstanceSriovEnabledCount   = initialMetricsCount
+	netAttachDefInstanceIBSriovEnabledCount = initialMetricsCount
 	//Change this when we set metrics per node.
 	objStore = make(map[string]string, metricStoreInitSize) // Preallocate room 110 entires per node*3
 	//NetAttachDefInstanceCounter ...  Total no of network attachment definition instance in the cluster
@@ -58,6 +59,13 @@ func UpdateNetAttachDefInstanceMetrics(tp string, val int) {
 		} else {
 			SetNetAttachDefEnabledInstanceUp(tp, initialMetricsCount)
 		}
+	} else if tp == "ib-sriov" {
+		netAttachDefInstanceIBSriovEnabledCount += val
+		if netAttachDefInstanceIBSriovEnabledCount > initialMetricsCount {
+			SetNetAttachDefEnabledInstanceUp(tp, metricsIncVal)
+		} else {
+			SetNetAttachDefEnabledInstanceUp(tp, initialMetricsCount)
+		}
 	} else if tp == "any" {
 		netAttachDefInstanceEnabledCount += val
 		if netAttachDefInstanceEnabledCount > initialMetricsCount {
@@ -79,6 +87,7 @@ func SetNetAttachDefEnabledInstanceUp(tp string, val int) {
 func InitMetrics() {
 	UpdateNetAttachDefInstanceMetrics("any", initialMetricsCount)
 	UpdateNetAttachDefInstanceMetrics("sriov", initialMetricsCount)
+	UpdateNetAttachDefInstanceMetrics("ib-sriov", initialMetricsCount)
 }
 
 //GetStoredValue ... Get stroed config value for pod key
