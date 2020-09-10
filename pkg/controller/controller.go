@@ -152,14 +152,30 @@ func newResourceController(client kubernetes.Interface, nadClient *netattachdefC
 			}
 		},
 		DeleteFunc: func(obj interface{}) {
-			pod := obj.(meta_v1.Object)
-			if _, ok := pod.GetAnnotations()[nadPodAnnotation]; ok {
+			metaObj, isMetaObj := obj.(meta_v1.Object)
+
+			// When a delete is dropped, the relist will notice an object in the store not
+			// in the list, leading to the insertion of a tombstone object which contains
+			// the deleted key/value. Note that this value might be stale.
+			if !isMetaObj {
+				tombstone, isTombstone := obj.(cache.DeletedFinalStateUnknown)
+				if !isTombstone {
+					utilruntime.HandleError(fmt.Errorf("contained object that is not a meta object and is not a tombstone %#v", obj))
+					return
+				}
+				metaObj, isMetaObj = tombstone.Obj.(meta_v1.Object)
+				if !isMetaObj {
+					utilruntime.HandleError(fmt.Errorf("tombstone contained object that is not a meta object %#v", obj))
+					return
+				}
+			}
+
+			if _, ok := metaObj.GetAnnotations()[nadPodAnnotation]; ok {
 				key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(obj)
 				if err == nil {
 					queue.Add(key)
 				}
 			}
-
 		},
 	})
 
