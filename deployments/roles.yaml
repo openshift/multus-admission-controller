@@ -5,6 +5,32 @@ metadata:
   name: net-attach-def-admission-controller-sa
   namespace: kube-system
 ---
+apiVersion: policy/v1beta1
+kind: PodSecurityPolicy
+metadata:
+  name: net-attach-def-admission-controller-psp
+  annotations:
+    seccomp.security.alpha.kubernetes.io/allowedProfileNames: '*'
+    seccomp.security.alpha.kubernetes.io/defaultProfileName:  'docker/default'
+spec:
+  privileged: false
+  allowPrivilegeEscalation: false
+  allowedCapabilities:
+  - '*'
+  volumes:
+  - '*'
+  hostNetwork: false
+  hostIPC: false
+  hostPID: false
+  runAsUser:
+    rule: 'RunAsAny'
+  seLinux:
+    rule: 'RunAsAny'
+  supplementalGroups:
+    rule: 'RunAsAny'
+  fsGroup:
+    rule: 'RunAsAny'
+---
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
@@ -16,7 +42,14 @@ rules:
 - apiGroups: ["k8s.cni.cncf.io"]
   resources: ["network-attachment-definitions"]
   verbs: ["get", "watch", "list"]
-
+- apiGroups:
+  - extensions
+  resources:
+  - podsecuritypolicies
+  resourceNames:
+  - net-attach-def-admission-controller-psp
+  verbs:
+  - use
 ---
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1

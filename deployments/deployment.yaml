@@ -28,7 +28,7 @@ spec:
     spec:
       containers:
       - name: net-attach-def-admission-controller
-        image: nfvpe/net-attach-def-admission-controller:snapshot
+        image: bcmt-registry:5000/net-attach-def-admission-controller:latest
         command:
         - ./bin/webhook
         args:
@@ -42,9 +42,16 @@ spec:
         - name: webhook-certs
           mountPath: /etc/webhook
           readOnly: True
+        - name: os-net-config
+          mountPath: /etc/os-net-config
+          readOnly: True
         imagePullPolicy: IfNotPresent
       serviceAccountName: net-attach-def-admission-controller-sa
       volumes:
       - name: webhook-certs
         secret:
           secretName: net-attach-def-admission-controller-secret
+      - name: os-net-config
+        hostPath:
+          path: /etc/os-net-config
+          type: Directory

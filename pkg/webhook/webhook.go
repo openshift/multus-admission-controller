@@ -20,6 +20,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/containernetworking/cni/libcni"
@@ -81,6 +82,116 @@ func validateCNIConfig(config []byte) error {
 	return nil
 }
 
+//GetInfraVlanData returns vlan ranges used by cloud infra-structure
+func GetInfraVlanData() ([]string, []int, error) {
+	type Member struct {
+		Type string `json:"type"`
+		Name string `json:"name"`
+	}
+	type Network struct {
+		Type    string   `json:"type"`
+		Name    string   `json:"name,omitempty"`
+		Members []Member `json:"members,omitempty"`
+		VlanID  int      `json:"vlan_id,omitempty"`
+		Device  string   `json:"device,omitempty"`
+	}
+	type NetworkConfig struct {
+		Networks []Network `json:"network_config"`
+	}
+
+	path := "/etc/os-net-config/config.json"
+	byteValue, err := ioutil.ReadFile(path)
+	if err != nil {
+		return nil, nil, fmt.Errorf("Error reading os-net-config json file %q, %q", path, err)
+	}
+
+	var networkConfig NetworkConfig
+	json.Unmarshal(byteValue, &networkConfig)
+
+	var infraInterfaces []string
+	var infraVlans []int
+	for _, network := range networkConfig.Networks {
+		if network.Name == "infra-bond" {
+			for _, member := range network.Members {
+				if member.Type == "interface" {
+					infraInterfaces = append(infraInterfaces, member.Name)
+				}
+			}
+		}
+		if network.Type == "vlan" && network.Device == "infra-bond" {
+			infraVlans = append(infraVlans, network.VlanID)
+		}
+	}
+
+	return infraInterfaces, infraVlans, nil
+}
+
+// validateCNIConfigSriov verifies following fields
+// conf: 'vlan' and 'vlanTrunkString'
+func validateCNIConfigSriov(config []byte) error {
+	var c map[string]interface{}
+	if err := json.Unmarshal(config, &c); err != nil {
+		return err
+	}
+
+	if cniType, ok := c["type"]; ok {
+		if cniType == "sriov" {
+			_, infraVlans, err := GetInfraVlanData()
+			if err != nil {
+				err := errors.New(err.Error())
+				glog.Error(err)
+				return nil
+			}
+
+			vlan, vlanExists := c["vlan"]
+			vlanTrunk, vlanTrunkExists := c["vlan_trunk"]
+			if vlanExists && vlanTrunkExists {
+				return fmt.Errorf("both vlan and vlan_trunk fields are defined")
+			}
+			if !vlanExists && !vlanTrunkExists {
+				return fmt.Errorf("either vlan or vlan_trunk field should be defined")
+			}
+			if vlanExists {
+				for i := 0; i < len(infraVlans); i++ {
+					if infraVlans[i] == vlan {
+						return fmt.Errorf("infrastructure vlan id %d shall not be used in vlan field", infraVlans[i])
+					}
+				}
+			}
+			if vlanTrunkExists {
+				vlanTrunkString := fmt.Sprintf("%v", vlanTrunk)
+				trunkingRanges := strings.Split(vlanTrunkString, ",")
+				for _, r := range trunkingRanges {
+					values := strings.Split(r, "-")
+					v1, err1 := strconv.Atoi(values[0])
+					v2, err2 := strconv.Atoi(values[len(values)-1])
+
+					if err1 != nil || err2 != nil {
+						return fmt.Errorf("vlan_trunk field format error")
+					}
+
+					if v1 > v2 || v1 < 1 || v2 > 4095 {
+						return fmt.Errorf("vlan_trunk field range error")
+					}
+
+					for i := 0; i < len(infraVlans); i++ {
+						if infraVlans[i] >= v1 && infraVlans[i] <= v2 {
+							return fmt.Errorf("infrastructure vlan id %d shall not be used in vlan_trunk field", infraVlans[i])
+						}
+					}
+				}
+			}
+			qos, qosExists := c["qos"]
+			if qosExists {
+				if qos != 0 {
+					return fmt.Errorf("qos %v is defined while only default qos (0) is allowed", qos)
+				}
+			}
+		}
+	}
+	return nil
+}
+
 // preprocessCNIConfig process CNI config bytes as following (that multus does too)
 // - if 'name' is missing, 'name' is filled
 func preprocessCNIConfig(name string, config []byte) ([]byte, error) {
@@ -134,6 +245,11 @@ func validateNetworkAttachmentDefinition(netAttachDef netv1.NetworkAttachmentDef
 		}
 		if err := validateCNIConfig(confBytes); err != nil {
 			err := errors.New("invalid config")
+			return false, err
+		}
+		// additional validation on sriov type
+		if err := validateCNIConfigSriov(confBytes); err != nil {
+			err := errors.New(err.Error())
 			return false, err
 		}
 		_, err = libcni.ConfListFromBytes(confBytes)
