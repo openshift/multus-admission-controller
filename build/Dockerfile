@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM golang:1.12
+FROM golang:1.15-alpine
 
 ENV PKG_NAME=github.com/k8snetworkplumbingwg/net-attach-def-admission-controller
 ENV PKG_PATH=$GOPATH/src/$PKG_NAME
