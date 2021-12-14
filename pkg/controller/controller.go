@@ -112,8 +112,7 @@ func StartWatching() {
 	go c.Run(stopCh)
 
 	sigterm := make(chan os.Signal, 1)
-	signal.Notify(sigterm, syscall.SIGTERM)
-	signal.Notify(sigterm, syscall.SIGINT)
+	signal.Notify(sigterm, syscall.SIGINT, syscall.SIGTERM, syscall.SIGKILL)
 	<-sigterm
 }
 
