@@ -34,10 +34,8 @@ import (
 	netattachdefClientset "github.com/k8snetworkplumbingwg/network-attachment-definition-client/pkg/client/clientset/versioned"
 	api_v1 "k8s.io/api/core/v1"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
-	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
@@ -72,7 +70,7 @@ type Controller struct {
 }
 
 //StartWatching ...  Start prepares watchers and run their controllers, then waits for process termination signals
-func StartWatching() {
+func StartWatching(ignoreNamespaces *string) {
 	var clientset kubernetes.Interface
 
 	/* setup Kubernetes API client */
@@ -92,15 +90,21 @@ func StartWatching() {
 	//Initialize default metrics
 	localmetrics.InitMetrics()
 
+	// add fieldSelector to filter the non-target namespaces
+	fieldSelector := "status.phase==Running"
+	if ignoreNamespaces != nil && len(*ignoreNamespaces) != 0 {
+		for _, ns := range strings.Split(*ignoreNamespaces, ",") {
+			fieldSelector = fmt.Sprintf("%s,metadata.namespace!=%s", fieldSelector, ns)
+		}
+	}
+
 	informer := cache.NewSharedIndexInformer(
-		&cache.ListWatch{
-			ListFunc: func(options meta_v1.ListOptions) (runtime.Object, error) {
-				return clientset.CoreV1().Pods(api_v1.NamespaceAll).List(options)
+		cache.NewFilteredListWatchFromClient(
+			clientset.CoreV1().RESTClient(),
+			"pods", api_v1.NamespaceAll, func(options *meta_v1.ListOptions) {
+				options.FieldSelector = fieldSelector
 			},
-			WatchFunc: func(options meta_v1.ListOptions) (watch.Interface, error) {
-				return clientset.CoreV1().Pods(api_v1.NamespaceAll).Watch(options)
-			},
-		},
+		),
 		&api_v1.Pod{},
 		resyncPeriod,
 		cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, // use default indexer
