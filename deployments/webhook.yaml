@@ -1,5 +1,5 @@
 ---
-apiVersion: admissionregistration.k8s.io/v1beta1
+apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingWebhookConfiguration
 metadata:
   name: net-attach-def-admission-controller-isolating-config
@@ -11,13 +11,15 @@ webhooks:
         namespace: ${NAMESPACE}
         path: "/isolate"
       caBundle: ${CA_BUNDLE}
+    admissionReviewVersions: ['v1']
+    sideEffects: None
     rules:
       - operations: [ "CREATE" ]
         apiGroups: ["apps", ""]
         apiVersions: ["v1"]
         resources: ["pods"]
 ---
-apiVersion: admissionregistration.k8s.io/v1beta1
+apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingWebhookConfiguration
 metadata:
   name: net-attach-def-admission-controller-validating-config
@@ -29,6 +31,8 @@ webhooks:
         namespace: ${NAMESPACE}
         path: "/validate"
       caBundle: ${CA_BUNDLE}
+    admissionReviewVersions: ['v1']
+    sideEffects: None
     rules:
       - operations: [ "CREATE", "UPDATE" ]
         apiGroups: ["k8s.cni.cncf.io"]
