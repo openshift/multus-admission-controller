@@ -48,6 +48,7 @@ func main() {
 	metricsAddress := flag.String("metrics-listen-address", ":9091", "metrics server listen address.")
 	cert := flag.String("tls-cert-file", "cert.pem", "File containing the default x509 Certificate for HTTPS.")
 	key := flag.String("tls-private-key-file", "key.pem", "File containing the default x509 private key matching --tls-cert-file.")
+	ignoreNamespaces := flag.String("ignore-namespaces", "", "Comma separated namespace list to ignore pod update")
 	flag.Parse()
 
 	glog.Infof("starting net-attach-def-admission-controller webhook server")
@@ -76,7 +77,7 @@ func main() {
 	startHTTPMetricServer(*metricsAddress)
 
 	//Start watching for pod creations
-	go controller.StartWatching()
+	go controller.StartWatching(ignoreNamespaces)
 
 	go func() {
 		/* register handlers */
