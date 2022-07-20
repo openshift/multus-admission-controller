@@ -46,6 +46,9 @@ if [ "${INSTALL_SELF_SIGNED_CERT}" == true ]; then
 	${BASE_DIR}/hack/webhook-create-signed-cert.sh --namespace ${NAMESPACE}
 fi
 
+kubectl -n ${NAMESPACE} create -f ${BASE_DIR}/deployments/roles.yaml
+kubectl -n ${NAMESPACE} create -f ${BASE_DIR}/deployments/deployment.yaml
+
 kubectl -n ${NAMESPACE} create -f ${BASE_DIR}/deployments/service.yaml
 export NAMESPACE
 cat ${BASE_DIR}/deployments/webhook.yaml | \
@@ -53,8 +56,6 @@ cat ${BASE_DIR}/deployments/webhook.yaml | \
 	sed -e "s|\${NAMESPACE}|${NAMESPACE}|g" | \
 	kubectl -n ${NAMESPACE} create -f -
 
-kubectl -n ${NAMESPACE} create -f ${BASE_DIR}/deployments/roles.yaml
-kubectl -n ${NAMESPACE} create -f ${BASE_DIR}/deployments/deployment.yaml
 
 sleep 5
 if [[ "$(kubectl get pod -l k8s-app=prometheus-operator -n ${OPERATOR_NAMESPACE} | grep -o prometheus-operator)" == "prometheus-operator" ]]; then
