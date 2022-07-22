@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// This is admission controller for network-attachment-definition.
 package main
 
 import (
@@ -53,7 +54,7 @@ func main() {
 
 	glog.Infof("starting net-attach-def-admission-controller webhook server")
 
-	keyPair, err := webhook.NewTlsKeypairReloader(*cert, *key)
+	keyPair, err := webhook.NewTLSKeypairReloader(*cert, *key)
 	if err != nil {
 		glog.Fatalf("error load certificate: %s", err.Error())
 	}
