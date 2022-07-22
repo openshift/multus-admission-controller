@@ -17,6 +17,7 @@ FROM golang:1.18
 LABEL org.opencontainers.image.source https://github.com/k8snetworkplumbingwg/net-attach-def-admission-controller
 ADD . /usr/src/net-attach-def-admission-controller
 
-RUN ./hack/build.sh
+RUN cd /usr/src/net-attach-def-admission-controller && \
+    ./hack/build.sh
 
 CMD ["./bin/webhook"]

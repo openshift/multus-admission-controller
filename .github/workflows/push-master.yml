@@ -1,8 +1,8 @@
-name: push-main
+name: push-master
 on:
   push:
     branches:
-      - main
+      - master
 env:
   image-push-owner: 'k8snetworkplumbingwg'
 jobs:
