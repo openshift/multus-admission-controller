@@ -94,7 +94,9 @@ func StartWatching(ignoreNamespaces *string) {
 	fieldSelector := "status.phase==Running"
 	if ignoreNamespaces != nil && len(*ignoreNamespaces) != 0 {
 		for _, ns := range strings.Split(*ignoreNamespaces, ",") {
-			fieldSelector = fmt.Sprintf("%s,metadata.namespace!=%s", fieldSelector, ns)
+			if len(ns) != 0 {
+				fieldSelector = fmt.Sprintf("%s,metadata.namespace!=%s", fieldSelector, ns)
+			}
 		}
 	}
 
