@@ -28,7 +28,8 @@ spec:
     spec:
       containers:
       - name: net-attach-def-admission-controller
-        image: ghcr.io/k8snetworkplumbingwg/net-attach-def-admission-controller:snapshot
+        #image: nfvpe/net-attach-def-admission-controller:snapshot
+        image: quay.io/s1061123/nad-admission:latest
         command:
         - ./bin/webhook
         args:
@@ -38,6 +39,7 @@ spec:
         - -tls-cert-file=/etc/webhook/cert.pem
         - -alsologtostderr=true
         - -metrics-listen-address=0.0.0.0:9091
+        - -ignore-namespaces="openshift-apiserver,openshift-apiserver-operator,openshift-authentication,openshift-authentication-operator,openshift-cluster-node-tuning-operator,openshift-cluster-storage-operator,openshift-console,openshift-controller-manager,openshift-dns,openshift-etcd,openshift-image-registry,openshift-ingress-canary,openshift-kube-apiserver,openshift-kube-controller-manager,openshift-kube-scheduler,openshift-machine-config-operator,openshift-marketplace,openshift-monitoring,openshift-multus,openshift-network-diagnotics,openshift-operator-lifecycle-manager,openshift-ovn-kubernetes"
         volumeMounts:
         - name: webhook-certs
           mountPath: /etc/webhook
@@ -59,7 +61,6 @@ spec:
                 fieldPath: status.podIP
         ports:
           - containerPort: 8443
-            hostPort: 8443
             name: https
         resources:
           requests:
