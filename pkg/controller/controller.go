@@ -127,6 +127,7 @@ func newResourceController(client kubernetes.Interface, nadClient *netattachdefC
 	informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			pod := obj.(meta_v1.Object)
+			glog.Infof("XXX: ADD: %s/%s", pod.GetNamespace(), pod.GetName())
 			if _, ok := pod.GetAnnotations()[nadPodAnnotation]; ok {
 				key, err := cache.MetaNamespaceKeyFunc(obj)
 				if err == nil {
@@ -137,6 +138,7 @@ func newResourceController(client kubernetes.Interface, nadClient *netattachdefC
 		UpdateFunc: func(oldP, newP interface{}) {
 			oldPod := oldP.(meta_v1.Object)
 			newPod := newP.(meta_v1.Object)
+			glog.Infof("XXX: UPDATE: %s/%s", newPod.GetNamespace(), newPod.GetName())
 			// Make sure object is not set for deletion and was actually changed
 			if newPod.GetDeletionTimestamp() == nil &&
 				oldPod.GetResourceVersion() != newPod.GetResourceVersion() {
@@ -173,6 +175,7 @@ func newResourceController(client kubernetes.Interface, nadClient *netattachdefC
 				}
 			}
 
+			glog.Infof("XXX: DELETE: %s/%s", metaObj.GetNamespace(), metaObj.GetName())
 			if _, ok := metaObj.GetAnnotations()[nadPodAnnotation]; ok {
 				key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(obj)
 				if err == nil {
