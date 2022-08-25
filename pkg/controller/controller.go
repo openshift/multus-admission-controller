@@ -37,8 +37,8 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
+	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/util/workqueue"
 )
 
@@ -74,10 +74,11 @@ func StartWatching(ignoreNamespaces *string) {
 	var clientset kubernetes.Interface
 
 	/* setup Kubernetes API client */
-	config, err := rest.InClusterConfig()
+	config, err := clientcmd.BuildConfigFromFlags("", os.Getenv("KUBECONFIG"))
 	if err != nil {
 		glog.Fatal(err)
 	}
+
 	clientset, err = kubernetes.NewForConfig(config)
 	if err != nil {
 		glog.Fatal(err)
