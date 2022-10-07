@@ -46,6 +46,7 @@ func main() {
 	port := flag.Int("port", 443, "The port on which to serve.")
 	address := flag.String("bind-address", "0.0.0.0", "The IP address on which to listen for the --port port.")
 	metricsAddress := flag.String("metrics-listen-address", ":9091", "metrics server listen address.")
+	encryptMetrics := flag.Bool("encrypt-metrics", false, "serve metrics over HTTPS using tls-cert-file/tls-private-key-file x509 key pair")
 	cert := flag.String("tls-cert-file", "cert.pem", "File containing the default x509 Certificate for HTTPS.")
 	key := flag.String("tls-private-key-file", "key.pem", "File containing the default x509 private key matching --tls-cert-file.")
 	ignoreNamespaces := flag.String("ignore-namespaces", "", "Comma separated namespace list to ignore pod update")
@@ -74,7 +75,13 @@ func main() {
 	/* init API client */
 	webhook.SetupInClusterClient()
 	// start metrics sever
-	startHTTPMetricServer(*metricsAddress)
+	if *encryptMetrics {
+		startHTTPMetricServer(*metricsAddress, &tls.Config{
+			GetCertificate: keyPair.GetCertificateFunc(),
+		})
+	} else {
+		startHTTPMetricServer(*metricsAddress, nil)
+	}
 
 	//Start watching for pod creations
 	go controller.StartWatching(ignoreNamespaces)
@@ -121,7 +128,7 @@ func main() {
 
 }
 
-func startHTTPMetricServer(metricsAddress string) {
+func startHTTPMetricServer(metricsAddress string, tlsConfig *tls.Config) {
 	mux := http.NewServeMux()
 	mux.Handle(metricsPath, promhttp.Handler())
 
@@ -145,9 +152,21 @@ func startHTTPMetricServer(metricsAddress string) {
 	})
 
 	go utilwait.Until(func() {
-		err := http.ListenAndServe(metricsAddress, mux)
-		if err != nil {
-			utilruntime.HandleError(fmt.Errorf("starting metrics server failed: %v", err))
+		if tlsConfig != nil {
+			srv := &http.Server{
+				Addr:      metricsAddress,
+				TLSConfig: tlsConfig,
+			}
+
+			err := srv.ListenAndServeTLS("", "")
+			if err != nil {
+				glog.Fatalf("starting tls metrics server failed: %v", err)
+			}
+		} else {
+			err := http.ListenAndServe(metricsAddress, mux)
+			if err != nil {
+				utilruntime.HandleError(fmt.Errorf("starting metrics server failed: %v", err))
+			}
 		}
 	}, 5*time.Second, utilwait.NeverStop)
 
