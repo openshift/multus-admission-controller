@@ -156,6 +156,7 @@ func startHTTPMetricServer(metricsAddress string, tlsConfig *tls.Config) {
 			srv := &http.Server{
 				Addr:      metricsAddress,
 				TLSConfig: tlsConfig,
+				Handler:   mux,
 			}
 
 			err := srv.ListenAndServeTLS("", "")
