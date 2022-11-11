@@ -9,7 +9,7 @@ require (
 	github.com/onsi/ginkgo v1.14.0
 	github.com/onsi/gomega v1.10.3
 	github.com/pkg/errors v0.9.1
-	github.com/prometheus/client_golang v1.11.0
+	github.com/prometheus/client_golang v1.11.1
 	gopkg.in/k8snetworkplumbingwg/multus-cni.v3 v3.7.3-0.20220621194709-ca8c9c579100
 	k8s.io/api v0.22.8
 	k8s.io/apimachinery v0.22.8
