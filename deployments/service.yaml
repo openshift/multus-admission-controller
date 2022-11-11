@@ -13,6 +13,9 @@ spec:
     targetPort: 443
   - name: metrics
     port: 9091
-    targetPort: 9091
+    targetPort: https
+  - name: https
+    port: 8443
+    targetPort: https
   selector:
     app: net-attach-def-admission-controller

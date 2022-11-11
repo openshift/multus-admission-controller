@@ -16,8 +16,8 @@ package types
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
+	"io"
 	"net"
 	"os"
 )
@@ -65,6 +65,9 @@ type NetConf struct {
 	Capabilities map[string]bool `json:"capabilities,omitempty"`
 	IPAM         IPAM            `json:"ipam,omitempty"`
 	DNS          DNS             `json:"dns"`
+
+	RawPrevResult map[string]interface{} `json:"prevResult,omitempty"`
+	PrevResult    Result                 `json:"-"`
 }
 
 type IPAM struct {
@@ -75,15 +78,16 @@ type IPAM struct {
 type NetConfList struct {
 	CNIVersion string `json:"cniVersion,omitempty"`
 
-	Name    string     `json:"name,omitempty"`
-	Plugins []*NetConf `json:"plugins,omitempty"`
+	Name         string     `json:"name,omitempty"`
+	DisableCheck bool       `json:"disableCheck,omitempty"`
+	Plugins      []*NetConf `json:"plugins,omitempty"`
 }
 
 type ResultFactoryFunc func([]byte) (Result, error)
 
 // Result is an interface that provides the result of plugin execution
 type Result interface {
-	// The highest CNI specification result verison the result supports
+	// The highest CNI specification result version the result supports
 	// without having to convert
 	Version() string
 
@@ -94,8 +98,8 @@ type Result interface {
 	// Prints the result in JSON format to stdout
 	Print() error
 
-	// Returns a JSON string representation of the result
-	String() string
+	// Prints the result in JSON format to provided writer
+	PrintTo(writer io.Writer) error
 }
 
 func PrintResult(result Result, version string) error {
@@ -126,15 +130,30 @@ func (r *Route) String() string {
 // Well known error codes
 // see https://github.com/containernetworking/cni/blob/master/SPEC.md#well-known-error-codes
 const (
-	ErrUnknown                uint = iota // 0
-	ErrIncompatibleCNIVersion             // 1
-	ErrUnsupportedField                   // 2
+	ErrUnknown                     uint = iota // 0
+	ErrIncompatibleCNIVersion                  // 1
+	ErrUnsupportedField                        // 2
+	ErrUnknownContainer                        // 3
+	ErrInvalidEnvironmentVariables             // 4
+	ErrIOFailure                               // 5
+	ErrDecodingFailure                         // 6
+	ErrInvalidNetworkConfig                    // 7
+	ErrTryAgainLater               uint = 11
+	ErrInternal                    uint = 999
 )
 
 type Error struct {
 	Code    uint   `json:"code"`
 	Msg     string `json:"msg"`
 	Details string `json:"details,omitempty"`
+}
+
+func NewError(code uint, msg, details string) *Error {
+	return &Error{
+		Code:    code,
+		Msg:     msg,
+		Details: details,
+	}
 }
 
 func (e *Error) Error() string {
@@ -186,6 +205,3 @@ func prettyPrint(obj interface{}) error {
 	_, err = os.Stdout.Write(data)
 	return err
 }
-
-// NotImplementedError is used to indicate that a method is not implemented for the given platform
-var NotImplementedError = errors.New("Not Implemented")
