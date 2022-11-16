@@ -155,18 +155,6 @@ const (
 	CLOCK_MONOTONIC                   = 0x3
 	CLOCK_PROCESS_CPUTIME_ID          = 0x2
 	CLOCK_REALTIME                    = 0x0
-<<<<<<<< HEAD:vendor/golang.org/x/sys/unix/zerrors_darwin_386.go
-	CLOCK_THREAD_CPUTIME_ID           = 0x10
-	CLOCK_UPTIME_RAW                  = 0x8
-	CLOCK_UPTIME_RAW_APPROX           = 0x9
-	CLONE_NOFOLLOW                    = 0x1
-	CLONE_NOOWNERCOPY                 = 0x2
-	CR0                               = 0x0
-	CR1                               = 0x1000
-	CR2                               = 0x2000
-	CR3                               = 0x3000
-	CRDLY                             = 0x3000
-========
 	CLOCK_THREAD_CPUTIME_ID           = 0x4
 	CLOCK_UPTIME                      = 0x5
 	CPUSTATES                         = 0x6
@@ -176,7 +164,6 @@ const (
 	CP_SPIN                           = 0x3
 	CP_SYS                            = 0x2
 	CP_USER                           = 0x0
->>>>>>>> upstream/master:vendor/golang.org/x/sys/unix/zerrors_openbsd_mips64.go
 	CREAD                             = 0x800
 	CRTSCTS                           = 0x10000
 	CS5                               = 0x0
