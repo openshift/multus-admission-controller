@@ -1,6 +1,6 @@
 NAMESPACE="kube-system"
 BASE_DIR=$(cd $(dirname $0)/..; pwd)
-PROMETHEUS_NAMESPACE="my-prometheus"
+PROMETHEUS_NAMESPACE="monitoring"
 
 
 # Give help text for parameters.
@@ -52,6 +52,7 @@ kubectl delete subs my-prometheus --wait -n ${PROMETHEUS_NAMESPACE} > /dev/null 
 kubectl delete operatorgroup operatorgroup --wait -n $PROMETHEUS_NAMESPACE --all > /dev/null 2>&1
 kubectl delete pod,configmap,deployment,secret,sts --wait -n ${PROMETHEUS_NAMESPACE} --all > /dev/null 2>&1
 kubectl delete namespace --wait ${PROMETHEUS_NAMESPACE} > /dev/null 2>&1
+
 
 
 

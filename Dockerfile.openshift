@@ -10,7 +10,7 @@ RUN mkdir -p $PKG_PATH
 COPY . $PKG_PATH/
 WORKDIR $PKG_PATH
 # RUN go install ./...
-RUN ./build.sh
+RUN ./hack/build.sh
 
 WORKDIR /
 

@@ -33,7 +33,5 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: prometheus-k8s
-  namespace: my-prometheus
-- kind: ServiceAccount
-  name: prometheus-operator
   namespace: ${PROMETHEUS_NAMESPACE}
+
