@@ -12,14 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM golang:1.12
+FROM golang:1.18
 
-ENV PKG_NAME=github.com/k8snetworkplumbingwg/net-attach-def-admission-controller
-ENV PKG_PATH=$GOPATH/src/$PKG_NAME
-ENV GO111MODULE=off
-WORKDIR $PKG_PATH
+LABEL org.opencontainers.image.source https://github.com/k8snetworkplumbingwg/net-attach-def-admission-controller
+ADD . /usr/src/net-attach-def-admission-controller
 
-COPY . $PKG_PATH/
-RUN ./build.sh
+RUN cd /usr/src/net-attach-def-admission-controller && \
+    ./hack/build.sh
 
 CMD ["./bin/webhook"]
