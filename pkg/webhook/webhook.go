@@ -25,7 +25,7 @@ import (
 
 	"github.com/containernetworking/cni/libcni"
 	"github.com/golang/glog"
-	"github.com/intel/multus-cni/types"
+	"gopkg.in/k8snetworkplumbingwg/multus-cni.v3/pkg/types"
 	netv1 "github.com/k8snetworkplumbingwg/network-attachment-definition-client/pkg/apis/k8s.cni.cncf.io/v1"
 	"github.com/pkg/errors"
 	"k8s.io/api/admission/v1beta1"

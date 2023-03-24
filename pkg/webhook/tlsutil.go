@@ -24,14 +24,18 @@ import (
 	"github.com/golang/glog"
 )
 
-type tlsKeypairReloader struct {
+type tlsKeypairReloader interface {
+	GetCertificateFunc() func(*tls.ClientHelloInfo) (*tls.Certificate, error)
+}
+
+type tlsKeypairReloaderImpl struct {
 	certMutex sync.RWMutex
 	cert      *tls.Certificate
 	certPath  string
 	keyPath   string
 }
 
-func (keyPair *tlsKeypairReloader) maybeReload() error {
+func (keyPair *tlsKeypairReloaderImpl) maybeReload() error {
 	newCert, err := tls.LoadX509KeyPair(keyPair.certPath, keyPair.keyPath)
 	if err != nil {
 		return err
@@ -43,7 +47,7 @@ func (keyPair *tlsKeypairReloader) maybeReload() error {
 	return nil
 }
 
-func (keyPair *tlsKeypairReloader) GetCertificateFunc() func(*tls.ClientHelloInfo) (*tls.Certificate, error) {
+func (keyPair *tlsKeypairReloaderImpl) GetCertificateFunc() func(*tls.ClientHelloInfo) (*tls.Certificate, error) {
 	return func(clientHello *tls.ClientHelloInfo) (*tls.Certificate, error) {
 		keyPair.certMutex.RLock()
 		defer keyPair.certMutex.RUnlock()
@@ -51,8 +55,9 @@ func (keyPair *tlsKeypairReloader) GetCertificateFunc() func(*tls.ClientHelloInf
 	}
 }
 
-func NewTlsKeypairReloader(certPath, keyPath string) (*tlsKeypairReloader, error) {
-	result := &tlsKeypairReloader{
+// NewTLSKeypairReloader reloads TLS keypairs
+func NewTLSKeypairReloader(certPath, keyPath string) (tlsKeypairReloader, error) {
+	result := &tlsKeypairReloaderImpl{
 		certPath: certPath,
 		keyPath:  keyPath,
 	}
