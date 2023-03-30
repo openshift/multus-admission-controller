@@ -35,7 +35,12 @@ done
 
 kubectl -n ${NAMESPACE} delete -f ${BASE_DIR}/deployments/service.yaml
 
-cat ${BASE_DIR}/deployments/webhook.yaml | \
+cat ${BASE_DIR}/deployments/webhook-validate.yaml | \
+	${BASE_DIR}/hack/webhook-patch-ca-bundle.sh | \
+    sed -e "s|\${NAMESPACE}|${NAMESPACE}|g" | \
+	kubectl -n ${NAMESPACE} delete -f -
+
+cat ${BASE_DIR}/deployments/webhook-isolate.yaml | \
 	${BASE_DIR}/hack/webhook-patch-ca-bundle.sh | \
     sed -e "s|\${NAMESPACE}|${NAMESPACE}|g" | \
 	kubectl -n ${NAMESPACE} delete -f -

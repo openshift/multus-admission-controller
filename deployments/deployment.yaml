@@ -30,7 +30,7 @@ spec:
       - name: net-attach-def-admission-controller
         image: ghcr.io/k8snetworkplumbingwg/net-attach-def-admission-controller:snapshot
         command:
-        - ./bin/webhook
+        - /usr/src/net-attach-def-admission-controller/bin/webhook
         args:
         - -bind-address=0.0.0.0
         - -port=443
@@ -59,7 +59,7 @@ spec:
                 fieldPath: status.podIP
         ports:
           - containerPort: 8443
-            hostPort: 8443
+            protocol: TCP
             name: https
         resources:
           requests:

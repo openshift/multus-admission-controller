@@ -20,4 +20,4 @@ ADD . /usr/src/net-attach-def-admission-controller
 RUN cd /usr/src/net-attach-def-admission-controller && \
     ./hack/build.sh
 
-CMD ["./bin/webhook"]
+CMD ["/usr/src/net-attach-def-admission-controller/bin/webhook"]
