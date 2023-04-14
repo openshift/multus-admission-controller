@@ -17,6 +17,3 @@ default :
 
 test : deps
 	ginkgo ./... -cover
-
-deps :
-	glide install --strip-vendor

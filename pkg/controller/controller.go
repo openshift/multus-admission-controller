@@ -15,6 +15,7 @@
 package controller
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -27,18 +28,18 @@ import (
 
 	"github.com/containernetworking/cni/libcni"
 	"github.com/golang/glog"
-	"github.com/intel/multus-cni/logging"
-	"github.com/intel/multus-cni/types"
 	"github.com/k8snetworkplumbingwg/net-attach-def-admission-controller/pkg/localmetrics"
 	networkv1 "github.com/k8snetworkplumbingwg/network-attachment-definition-client/pkg/apis/k8s.cni.cncf.io/v1"
 	netattachdefClientset "github.com/k8snetworkplumbingwg/network-attachment-definition-client/pkg/client/clientset/versioned"
+	"gopkg.in/k8snetworkplumbingwg/multus-cni.v3/pkg/logging"
+	"gopkg.in/k8snetworkplumbingwg/multus-cni.v3/pkg/types"
 	api_v1 "k8s.io/api/core/v1"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
+	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/util/workqueue"
 )
 
@@ -69,15 +70,16 @@ type Controller struct {
 	nadClientset *netattachdefClientset.Clientset
 }
 
-//StartWatching ...  Start prepares watchers and run their controllers, then waits for process termination signals
+// StartWatching ...  Start prepares watchers and run their controllers, then waits for process termination signals
 func StartWatching(ignoreNamespaces *string) {
 	var clientset kubernetes.Interface
 
 	/* setup Kubernetes API client */
-	config, err := rest.InClusterConfig()
+	config, err := clientcmd.BuildConfigFromFlags("", os.Getenv("KUBECONFIG"))
 	if err != nil {
 		glog.Fatal(err)
 	}
+
 	clientset, err = kubernetes.NewForConfig(config)
 	if err != nil {
 		glog.Fatal(err)
@@ -94,7 +96,9 @@ func StartWatching(ignoreNamespaces *string) {
 	fieldSelector := "status.phase==Running"
 	if ignoreNamespaces != nil && len(*ignoreNamespaces) != 0 {
 		for _, ns := range strings.Split(*ignoreNamespaces, ",") {
-			fieldSelector = fmt.Sprintf("%s,metadata.namespace!=%s", fieldSelector, ns)
+			if len(ns) != 0 {
+				fieldSelector = fmt.Sprintf("%s,metadata.namespace!=%s", fieldSelector, ns)
+			}
 		}
 	}
 
@@ -294,7 +298,7 @@ func (c *Controller) processItem(key string) error {
 
 // find crd by name
 func (c *Controller) getCrdByName(name string, namespace string) (*networkv1.NetworkAttachmentDefinition, error) {
-	netAttachDef, err := c.nadClientset.K8sCniCncfIoV1().NetworkAttachmentDefinitions(namespace).Get(name, meta_v1.GetOptions{})
+	netAttachDef, err := c.nadClientset.K8sCniCncfIoV1().NetworkAttachmentDefinitions(namespace).Get(context.TODO(), name, meta_v1.GetOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("Failed to locate network attachment definition %s/%s", namespace, name)
 	}
