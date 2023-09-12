@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM golang:1.18
+FROM golang:1.20
 
 LABEL org.opencontainers.image.source https://github.com/k8snetworkplumbingwg/net-attach-def-admission-controller
 ADD . /usr/src/net-attach-def-admission-controller
