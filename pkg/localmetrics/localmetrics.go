@@ -29,15 +29,15 @@ var (
 	netAttachDefInstanceEnabledCount        = initialMetricsCount
 	netAttachDefInstanceSriovEnabledCount   = initialMetricsCount
 	netAttachDefInstanceIBSriovEnabledCount = initialMetricsCount
-	//Change this when we set metrics per node.
+	// Change this when we set metrics per node.
 	objStore = make(map[string]string, metricStoreInitSize) // Preallocate room 110 entires per node*3
-	//NetAttachDefInstanceCounter ...  Total no of network attachment definition instance in the cluster
+	// NetAttachDefInstanceCounter ...  Total no of network attachment definition instance in the cluster
 	NetAttachDefInstanceCounter = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Name: "network_attachment_definition_instances",
 			Help: "Metric to get number of instance using network attachment definition in the cluster.",
 		}, []string{"networks"})
-	//NetAttachDefEnabledInstanceUp  ... check if any instance with netattachdef config enabled
+	// NetAttachDefEnabledInstanceUp  ... check if any instance with netattachdef config enabled
 	NetAttachDefEnabledInstanceUp = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Name: "network_attachment_definition_enabled_instance_up",
@@ -45,7 +45,7 @@ var (
 		}, []string{"networks"})
 )
 
-//UpdateNetAttachDefInstanceMetrics ...
+// UpdateNetAttachDefInstanceMetrics ...
 func UpdateNetAttachDefInstanceMetrics(tp string, val int) {
 
 	glog.Infof("UPdating net-attach-def metrics for %s with value %d", tp, val)
@@ -77,20 +77,20 @@ func UpdateNetAttachDefInstanceMetrics(tp string, val int) {
 
 }
 
-//SetNetAttachDefEnabledInstanceUp ...
+// SetNetAttachDefEnabledInstanceUp ...
 func SetNetAttachDefEnabledInstanceUp(tp string, val int) {
 	NetAttachDefEnabledInstanceUp.With(prometheus.Labels{
 		"networks": tp}).Set(float64(val))
 }
 
-//InitMetrics ... empty metrics
+// InitMetrics ... empty metrics
 func InitMetrics() {
 	UpdateNetAttachDefInstanceMetrics("any", initialMetricsCount)
 	UpdateNetAttachDefInstanceMetrics("sriov", initialMetricsCount)
 	UpdateNetAttachDefInstanceMetrics("ib-sriov", initialMetricsCount)
 }
 
-//GetStoredValue ... Get stroed config value for pod key
+// GetStoredValue ... Get stroed config value for pod key
 func GetStoredValue(key string) string {
 	if value, ok := objStore[key]; ok {
 		return value
@@ -98,7 +98,7 @@ func GetStoredValue(key string) string {
 	return ""
 }
 
-//SetStoredValue // set stored key value
+// SetStoredValue ... set stored key value
 func SetStoredValue(key string, val string) {
 	if val == "" {
 		_, ok := objStore[key]

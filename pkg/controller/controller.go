@@ -51,11 +51,11 @@ const (
 type metricAction int
 
 const (
-	//Add ... add metrics
+	// Add ... add metrics
 	Add metricAction = 1
-	//Delete .... delete metrics
+	// Delete .... delete metrics
 	Delete metricAction = -1
-	//Reset .... reset metrics
+	// Reset .... reset metrics
 	Reset        metricAction  = 0
 	resyncPeriod time.Duration = time.Second * 3600 // resync every one hour, default is 10 hour
 	// careful with the CPU load if the period time is too short, but required to catch any missed updates
@@ -70,11 +70,11 @@ type Controller struct {
 	nadClientset *netattachdefClientset.Clientset
 }
 
-//StartWatching ...  Start prepares watchers and run their controllers, then waits for process termination signals
+// StartWatching ...  Start prepares watchers and run their controllers, then waits for process termination signals
 func StartWatching(ignoreNamespaces *string) {
 	var clientset kubernetes.Interface
 
-	/* setup Kubernetes API client */
+	// setup Kubernetes API client
 	config, err := clientcmd.BuildConfigFromFlags("", os.Getenv("KUBECONFIG"))
 	if err != nil {
 		glog.Fatal(err)
@@ -84,12 +84,12 @@ func StartWatching(ignoreNamespaces *string) {
 	if err != nil {
 		glog.Fatal(err)
 	}
-	//get custom clientset for net def, if error ignore
+	// get custom clientset for net def, if error ignore
 	nadClientset, err := netattachdefClientset.NewForConfig(config)
 	if err != nil {
 		glog.Fatalf("There was error accessing client set for net attach def %v", err)
 	}
-	//Initialize default metrics
+	// Initialize default metrics
 	localmetrics.InitMetrics()
 
 	// add fieldSelector to filter the non-target namespaces
@@ -289,7 +289,7 @@ func (c *Controller) processItem(key string) error {
 		if name, ok := pod.GetAnnotations()[nadPodAnnotation]; ok {
 			return c.updateMetrics(key, name, namespace, Add)
 		}
-		//ok if annotation not found delete the metrics.
+		// ok if annotation not found delete the metrics.
 		return c.updateMetrics(key, "", namespace, Delete)
 	}
 
@@ -312,8 +312,8 @@ func (c *Controller) getConfigTypes(crd *networkv1.NetworkAttachmentDefinition) 
 
 	if crd.Spec.Config != "" {
 		// try to unmarshal config into NetworkConfig or NetworkConfigList
-		//  using actual code from libcni - if successful, it means that the config
-		//  will be accepted by CNI itself as well
+		// using actual code from libcni - if successful, it means that the config
+		// will be accepted by CNI itself as well
 		confBytes = []byte(crd.Spec.Config)
 		networkConfigList, err := libcni.ConfListFromBytes(confBytes)
 
@@ -362,9 +362,9 @@ func (c *Controller) updateMetrics(key string, configNames string, namespace str
 			}
 			localmetrics.SetStoredValue(key, "")
 		}
-	case Add: //create new pod event
+	case Add: // create new pod event
 		{
-			//clean up
+			// clean up
 			oldConfigs := localmetrics.GetStoredValue(key)
 			if oldConfigs != "" {
 				c.updateMetrics(key, "", namespace, Delete)
@@ -384,21 +384,21 @@ func (c *Controller) updateMetrics(key string, configNames string, namespace str
 					}
 				}
 			}
-			//unique network types metrics
+			// unique network types metrics
 			for key := range set {
 				localmetrics.UpdateNetAttachDefInstanceMetrics(key, int(action))
 			}
-			//and mcvlan,bridge=1
+			// and mcvlan,bridge=1
 			if len(configTypes) > 1 {
 				sort.Strings(configTypes)
 				joinedTypes := strings.Join(configTypes, ",")
 				localmetrics.UpdateNetAttachDefInstanceMetrics(joinedTypes, int(action))
 				localmetrics.SetStoredValue(key, joinedTypes)
-				//metrics for any combinations
+				// metrics for any combinations
 				localmetrics.UpdateNetAttachDefInstanceMetrics("any", int(action))
 			} else if len(configTypes) == 1 {
 				localmetrics.SetStoredValue(key, configTypes[0])
-				//metrics for any combinations
+				// metrics for any combinations
 				localmetrics.UpdateNetAttachDefInstanceMetrics("any", int(action))
 			}
 		}
