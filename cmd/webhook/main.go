@@ -43,7 +43,7 @@ const (
 )
 
 func main() {
-	/* load configuration */
+	// load configuration
 	port := flag.Int("port", 443, "The port on which to serve.")
 	address := flag.String("bind-address", "0.0.0.0", "The IP address on which to listen for the --port port.")
 	metricsAddress := flag.String("metrics-listen-address", ":9091", "metrics server listen address.")
@@ -73,7 +73,7 @@ func main() {
 	prometheus.Unregister(prometheus.NewProcessCollector(prometheus.ProcessCollectorOpts{}))
 	prometheus.Unregister(prometheus.NewGoCollector())
 
-	/* init API client */
+	// init API client
 	webhook.SetupInClusterClient()
 	// start metrics sever
 	if *encryptMetrics {
@@ -84,16 +84,16 @@ func main() {
 		startHTTPMetricServer(*metricsAddress, nil)
 	}
 
-	//Start watching for pod creations
+	// Start watching for pod creations
 	go controller.StartWatching(ignoreNamespaces)
 
 	go func() {
-		/* register handlers */
+		// register handlers
 		var httpServer *http.Server
 		http.HandleFunc("/validate", webhook.ValidateHandler)
 		http.HandleFunc("/isolate", webhook.IsolateHandler)
 
-		/* start serving */
+		// start serving
 		httpServer = &http.Server{
 			Addr: fmt.Sprintf("%s:%d", *address, *port),
 			TLSConfig: &tls.Config{
@@ -107,7 +107,7 @@ func main() {
 		}
 	}()
 
-	/* watch the cert file and restart http sever if the file updated. */
+	// watch the cert file and restart http sever if the file updated.
 	oldHashVal := ""
 	for {
 		hasher := sha512.New()

@@ -28,7 +28,7 @@ import (
 	"gopkg.in/k8snetworkplumbingwg/multus-cni.v3/pkg/types"
 	netv1 "github.com/k8snetworkplumbingwg/network-attachment-definition-client/pkg/apis/k8s.cni.cncf.io/v1"
 	"github.com/pkg/errors"
-	"k8s.io/api/admission/v1beta1"
+	admissionv1 "k8s.io/api/admission/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -156,9 +156,9 @@ func validateNetworkAttachmentDefinition(netAttachDef netv1.NetworkAttachmentDef
 	return true, nil
 }
 
-func prepareAdmissionReviewResponse(allowed bool, message string, ar *v1beta1.AdmissionReview) error {
+func prepareAdmissionReviewResponse(allowed bool, message string, ar *admissionv1.AdmissionReview) error {
 	if ar.Request != nil {
-		ar.Response = &v1beta1.AdmissionResponse{
+		ar.Response = &admissionv1.AdmissionResponse{
 			UID:     ar.Request.UID,
 			Allowed: allowed,
 		}
@@ -172,7 +172,7 @@ func prepareAdmissionReviewResponse(allowed bool, message string, ar *v1beta1.Ad
 	return errors.New("received empty AdmissionReview request")
 }
 
-func readAdmissionReview(req *http.Request) (*v1beta1.AdmissionReview, int, error) {
+func readAdmissionReview(req *http.Request) (*admissionv1.AdmissionReview, int, error) {
 	var body []byte
 
 	if req.Body != nil {
@@ -187,7 +187,7 @@ func readAdmissionReview(req *http.Request) (*v1beta1.AdmissionReview, int, erro
 		return nil, http.StatusBadRequest, err
 	}
 
-	/* validate HTTP request headers */
+	// validate HTTP request headers
 	contentType := req.Header.Get("Content-Type")
 	if contentType != "application/json" {
 		err := errors.Errorf("Invalid Content-Type='%s', expected 'application/json'", contentType)
@@ -195,7 +195,7 @@ func readAdmissionReview(req *http.Request) (*v1beta1.AdmissionReview, int, erro
 		return nil, http.StatusUnsupportedMediaType, err
 	}
 
-	/* read AdmissionReview from the request body */
+	// read AdmissionReview from the request body
 	ar, err := deserializeAdmissionReview(body)
 	if err != nil {
 		err := errors.Wrap(err, "error deserializing AdmissionReview")
@@ -206,14 +206,14 @@ func readAdmissionReview(req *http.Request) (*v1beta1.AdmissionReview, int, erro
 	return ar, http.StatusOK, nil
 }
 
-func deserializeAdmissionReview(body []byte) (*v1beta1.AdmissionReview, error) {
-	ar := &v1beta1.AdmissionReview{}
+func deserializeAdmissionReview(body []byte) (*admissionv1.AdmissionReview, error) {
+	ar := &admissionv1.AdmissionReview{}
 	runtimeScheme := runtime.NewScheme()
 	codecs := serializer.NewCodecFactory(runtimeScheme)
 	deserializer := codecs.UniversalDeserializer()
 	_, _, err := deserializer.Decode(body, nil, ar)
 
-	/* Decode() won't return an error if the data wasn't actual AdmissionReview */
+	// Decode() won't return an error if the data wasn't actual AdmissionReview
 	if err == nil && ar.TypeMeta.Kind != "AdmissionReview" {
 		err = errors.New("received object is not an AdmissionReview")
 	}
@@ -221,7 +221,7 @@ func deserializeAdmissionReview(body []byte) (*v1beta1.AdmissionReview, error) {
 	return ar, err
 }
 
-func analyzeIsolationAnnotation(ar *v1beta1.AdmissionReview) (bool, error) {
+func analyzeIsolationAnnotation(ar *admissionv1.AdmissionReview) (bool, error) {
 
 	var metadata *metav1.ObjectMeta
 	var pod v1.Pod
@@ -348,14 +348,14 @@ func parsePodNetworkObjectName(podnetwork string) (string, string, string, error
 	return netNsName, networkName, netIfName, nil
 }
 
-func deserializeNetworkAttachmentDefinition(ar *v1beta1.AdmissionReview) (netv1.NetworkAttachmentDefinition, error) {
-	/* unmarshal NetworkAttachmentDefinition from AdmissionReview request */
+func deserializeNetworkAttachmentDefinition(ar *admissionv1.AdmissionReview) (netv1.NetworkAttachmentDefinition, error) {
+	// unmarshal NetworkAttachmentDefinition from AdmissionReview request
 	netAttachDef := netv1.NetworkAttachmentDefinition{}
 	err := json.Unmarshal(ar.Request.Object.Raw, &netAttachDef)
 	return netAttachDef, err
 }
 
-func handleValidationError(w http.ResponseWriter, ar *v1beta1.AdmissionReview, orgErr error) {
+func handleValidationError(w http.ResponseWriter, ar *admissionv1.AdmissionReview, orgErr error) {
 	err := prepareAdmissionReviewResponse(false, orgErr.Error(), ar)
 	if err != nil {
 		err := errors.Wrap(err, "error preparing AdmissionResponse")
@@ -365,7 +365,7 @@ func handleValidationError(w http.ResponseWriter, ar *v1beta1.AdmissionReview, o
 	writeResponse(w, ar)
 }
 
-func writeResponse(w http.ResponseWriter, ar *v1beta1.AdmissionReview) {
+func writeResponse(w http.ResponseWriter, ar *admissionv1.AdmissionReview) {
 	// glog.Infof("sending response to the Kubernetes API server")
 	resp, _ := json.Marshal(ar)
 	w.Write(resp)
@@ -399,7 +399,7 @@ func IsolateHandler(w http.ResponseWriter, req *http.Request) {
 
 // ValidateHandler handles net-attach-def validation requests
 func ValidateHandler(w http.ResponseWriter, req *http.Request) {
-	/* read AdmissionReview from the HTTP request */
+	// read AdmissionReview from the HTTP request
 	ar, httpStatus, err := readAdmissionReview(req)
 	if err != nil {
 		http.Error(w, err.Error(), httpStatus)
@@ -412,14 +412,14 @@ func ValidateHandler(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	/* perform actual object validation */
+	// perform actual object validation
 	allowed, err := validateNetworkAttachmentDefinition(netAttachDef)
 	if err != nil {
 		handleValidationError(w, ar, err)
 		return
 	}
 
-	/* perpare response and send it back to the API server */
+	// perpare response and send it back to the API server
 	err = prepareAdmissionReviewResponse(allowed, "", ar)
 	if err != nil {
 		glog.Error(err)
@@ -431,7 +431,7 @@ func ValidateHandler(w http.ResponseWriter, req *http.Request) {
 
 // SetupInClusterClient sets up api configuration
 func SetupInClusterClient() {
-	/* setup Kubernetes API client */
+	// setup Kubernetes API client
 	config, err := clientcmd.BuildConfigFromFlags("", os.Getenv("KUBECONFIG"))
 	if err != nil {
 		glog.Fatal(err)
