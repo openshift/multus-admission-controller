@@ -9,6 +9,7 @@ NAMESPACE="kube-system"
 PROMETHEUS_NAMESPACE="monitoring"
 OPERATOR_NAMESPACE="operators"
 INSTALL_SELF_SIGNED_CERT=true
+ENABLE_ISOLATE_WEBHOOK=false
 
 # Give help text for parameters.
 function usage()
@@ -17,6 +18,7 @@ function usage()
     echo -e "\t-h --help"
     echo -e "\t--install-self-signed-cert=${INSTALL_SELF_SIGNED_CERT}"
     echo -e "\t--namespace=${NAMESPACE}"
+    echo -e "\t--enable-isolate-webhook"
 }
 # Parse parameters given as arguments to this script.
 while [ "$1" != "" ]; do
@@ -30,6 +32,9 @@ while [ "$1" != "" ]; do
         --install-self-signed-cert)
             INSTALL_SELF_SIGNED_CERT=$VALUE
             ;;
+        --enable-isolate-webhook)
+            ENABLE_ISOLATE_WEBHOOK=true
+	    ;;
         --namespace)
             NAMESPACE=$VALUE
             ;;
@@ -51,10 +56,19 @@ kubectl -n ${NAMESPACE} create -f ${BASE_DIR}/deployments/deployment.yaml
 
 kubectl -n ${NAMESPACE} create -f ${BASE_DIR}/deployments/service.yaml
 export NAMESPACE
-cat ${BASE_DIR}/deployments/webhook.yaml | \
+# install validate webhook
+cat ${BASE_DIR}/deployments/webhook-validate.yaml | \
 	${BASE_DIR}/hack/webhook-patch-ca-bundle.sh | \
 	sed -e "s|\${NAMESPACE}|${NAMESPACE}|g" | \
 	kubectl -n ${NAMESPACE} create -f -
+
+# install isolate webhook
+if [ "${ENABLE_ISOLATE_WEBHOOK}" == true ]; then
+	cat ${BASE_DIR}/deployments/webhook-isolate.yaml | \
+		${BASE_DIR}/hack/webhook-patch-ca-bundle.sh | \
+		sed -e "s|\${NAMESPACE}|${NAMESPACE}|g" | \
+		kubectl -n ${NAMESPACE} create -f -
+fi
 
 
 sleep 5

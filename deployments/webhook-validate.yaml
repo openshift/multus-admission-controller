@@ -1,0 +1,20 @@
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: net-attach-def-admission-controller-validating-config
+webhooks:
+  - name: net-attach-def-admission-controller-validating-config.k8s.io
+    clientConfig:
+      service:
+        name: net-attach-def-admission-controller-service
+        namespace: ${NAMESPACE}
+        path: "/validate"
+      caBundle: ${CA_BUNDLE}
+    admissionReviewVersions: ['v1']
+    sideEffects: None
+    rules:
+      - operations: [ "CREATE", "UPDATE" ]
+        apiGroups: ["k8s.cni.cncf.io"]
+        apiVersions: ["v1"]
+        resources: ["network-attachment-definitions"]
