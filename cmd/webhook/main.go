@@ -24,6 +24,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"path/filepath"
 	"syscall"
 	"time"
 
@@ -111,10 +112,16 @@ func main() {
 	oldHashVal := ""
 	for {
 		hasher := sha512.New()
-		s, err := ioutil.ReadFile(*cert)
+		certPath, err := filepath.Abs(*cert)
+		if err != nil {
+			glog.Fatalf("illegal path %s in certPath: %s: %v", *cert, certPath, err)
+			os.Exit(1)
+		}
+		s, err := ioutil.ReadFile(certPath)
 		hasher.Write(s)
 		if err != nil {
 			glog.Fatalf("failed to read file %s: %v", *cert, err)
+			os.Exit(1)
 		}
 		newHashVal := hex.EncodeToString(hasher.Sum(nil))
 		if oldHashVal != "" && newHashVal != oldHashVal {
