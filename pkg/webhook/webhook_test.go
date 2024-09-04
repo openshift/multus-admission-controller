@@ -205,5 +205,36 @@ var _ = Describe("Webhook", func() {
 			},
 			true, false,
 		),
+		Entry(
+			"validate missing name in config",
+			netv1.NetworkAttachmentDefinition{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "some-valid-name",
+				},
+				Spec: netv1.NetworkAttachmentDefinitionSpec{
+					Config: `{
+						"cniVersion": "0.3.0",
+						"plugins": [{
+							"type": "bridge",
+							"bridge": "br0",
+							"ipam": {
+								"type": "host-local",
+								"subnet": "192.168.1.0/24"
+							}
+						},
+						{
+							"type": "some-plugin"
+						},
+						{
+							"type": "another-plugin",
+							"sysctl": {
+								"net.ipv4.conf.all.log_martians": "1"
+							}
+						}]
+					}`,
+				},
+			},
+			true, false,
+		),
 	)
 })
