@@ -87,10 +87,13 @@ func validateCNIConfig(config []byte) error {
 func preprocessCNIConfig(name string, config []byte) ([]byte, error) {
 	var c map[string]interface{}
 	if err := json.Unmarshal(config, &c); err != nil {
-		if n, ok := c["name"]; !ok || n == "" {
-			c["name"] = name
-		}
+		return nil, err
 	}
+
+	if n, ok := c["name"]; !ok || n == "" {
+		c["name"] = name
+	}
+
 	configBytes, err := json.Marshal(c)
 	return configBytes, err
 }
