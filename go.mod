@@ -4,7 +4,7 @@ go 1.17
 
 require (
 	github.com/containernetworking/cni v0.8.1
-	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
+	github.com/golang/glog v1.2.4
 	github.com/k8snetworkplumbingwg/network-attachment-definition-client v1.1.2-0.20220511184442-64cfb249bdbe
 	github.com/onsi/ginkgo v1.14.0
 	github.com/onsi/gomega v1.10.3
@@ -24,7 +24,7 @@ require (
 	github.com/go-logr/logr v0.4.0 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
-	github.com/google/go-cmp v0.5.5 // indirect
+	github.com/google/go-cmp v0.6.0 // indirect
 	github.com/google/gofuzz v1.1.0 // indirect
 	github.com/googleapis/gnostic v0.5.5 // indirect
 	github.com/imdario/mergo v0.3.5 // indirect
