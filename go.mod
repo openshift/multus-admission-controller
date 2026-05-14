@@ -1,6 +1,6 @@
 module github.com/k8snetworkplumbingwg/net-attach-def-admission-controller
 
-go 1.24.0
+go 1.25.9
 
 require (
 	github.com/containernetworking/cni v1.3.0
