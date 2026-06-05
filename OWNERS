@@ -1,20 +1,18 @@
 reviewers:
-  - dougbtv
-  - zshi
+  - taanyas
+  - raphaelvrosa
+  - LionelJouin
+  - danwinship
+  - SchSeba
   - fepan
-  - s1061123
   - jeremyeder
-  - aneeshkp
   - bpickard22
-  - pliurh
 approvers:
-  - dougbtv
-  - zshi
+  - LionelJouin
+  - danwinship
+  - SchSeba
   - fepan
-  - s1061123
   - jeremyeder
-  - aneeshkp
   - bpickard22
-  - pliurh
 component: "Networking"
 subcomponent: "multus"
