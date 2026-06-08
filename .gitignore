@@ -10,3 +10,6 @@ coverage.txt
 
 # Go workspace file
 go.work
+
+#IDE (GoLand) specific 
+.idea/
