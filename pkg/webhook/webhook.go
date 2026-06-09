@@ -147,6 +147,10 @@ func validateNetworkAttachmentDefinition(netAttachDef netv1.NetworkAttachmentDef
 				return false, err
 			}
 		}
+		if err := validateIPAMConfigs(confBytes); err != nil {
+			glog.Info(err)
+			return false, err
+		}
 
 	} else {
 		glog.Infof("Allowing empty spec.config")
