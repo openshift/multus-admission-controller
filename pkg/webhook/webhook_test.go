@@ -205,5 +205,54 @@ var _ = Describe("Webhook", func() {
 			},
 			true, false,
 		),
+		Entry(
+			"invalid whereabouts ipam range and exclude",
+			netv1.NetworkAttachmentDefinition{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "checking-nad",
+				},
+				Spec: netv1.NetworkAttachmentDefinitionSpec{
+					Config: `{
+						"cniVersion": "0.3.1",
+						"name": "whereabouts_sba",
+						"type": "macvlan",
+						"mode": "bridge",
+						"ipam": {
+							"type": "whereabouts",
+							"range": "abc.169.1.0/24",
+							"exclude": [
+								"a.b.c.d/23"
+							]
+						}
+					}`,
+				},
+			},
+			false, true,
+		),
+		Entry(
+			"valid whereabouts ipam config",
+			netv1.NetworkAttachmentDefinition{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "valid-whereabouts-nad",
+				},
+				Spec: netv1.NetworkAttachmentDefinitionSpec{
+					Config: `{
+						"cniVersion": "0.3.1",
+						"name": "whereabouts-valid",
+						"type": "macvlan",
+						"mode": "bridge",
+						"ipam": {
+							"type": "whereabouts",
+							"range": "192.168.169.0/24",
+							"exclude": [
+								"192.168.169.10/32"
+							],
+							"gateway": "192.168.169.1"
+						}
+					}`,
+				},
+			},
+			true, false,
+		),
 	)
 })
