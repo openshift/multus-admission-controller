@@ -28,11 +28,11 @@ import (
 
 	"github.com/containernetworking/cni/libcni"
 	"github.com/golang/glog"
-	"gopkg.in/k8snetworkplumbingwg/multus-cni.v4/pkg/logging"
-	"gopkg.in/k8snetworkplumbingwg/multus-cni.v4/pkg/types"
 	"github.com/k8snetworkplumbingwg/net-attach-def-admission-controller/pkg/localmetrics"
 	networkv1 "github.com/k8snetworkplumbingwg/network-attachment-definition-client/pkg/apis/k8s.cni.cncf.io/v1"
 	netattachdefClientset "github.com/k8snetworkplumbingwg/network-attachment-definition-client/pkg/client/clientset/versioned"
+	"gopkg.in/k8snetworkplumbingwg/multus-cni.v4/pkg/logging"
+	"gopkg.in/k8snetworkplumbingwg/multus-cni.v4/pkg/types"
 	api_v1 "k8s.io/api/core/v1"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -71,7 +71,7 @@ type Controller struct {
 }
 
 // StartWatching ...  Start prepares watchers and run their controllers, then waits for process termination signals
-func StartWatching(ignoreNamespaces *string) {
+func StartWatching(ignoreNamespaces []string) {
 	var clientset kubernetes.Interface
 
 	// setup Kubernetes API client
@@ -94,12 +94,8 @@ func StartWatching(ignoreNamespaces *string) {
 
 	// add fieldSelector to filter the non-target namespaces
 	fieldSelector := "status.phase==Running"
-	if ignoreNamespaces != nil && len(*ignoreNamespaces) != 0 {
-		for _, ns := range strings.Split(*ignoreNamespaces, ",") {
-			if len(ns) != 0 {
-				fieldSelector = fmt.Sprintf("%s,metadata.namespace!=%s", fieldSelector, ns)
-			}
-		}
+	for _, ns := range ignoreNamespaces {
+		fieldSelector = fmt.Sprintf("%s,metadata.namespace!=%s", fieldSelector, ns)
 	}
 
 	informer := cache.NewSharedIndexInformer(
