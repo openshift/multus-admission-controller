@@ -171,11 +171,6 @@ func startHTTPServers(config *ServerConfig) (func(), error) {
 		if err != nil {
 			return nil, fmt.Errorf("error parsing TLS min version %q: %w", config.TLSMinVersion, err)
 		}
-
-		// Validate that the minimum TLS version is at least TLS 1.2
-		if tlsMinVersionID < tls.VersionTLS12 {
-			return nil, fmt.Errorf("TLS min version %q is below the minimum required version TLS 1.2", config.TLSMinVersion)
-		}
 	}
 
 	applyTLSOptions := func(to *tls.Config) *tls.Config {
