@@ -17,16 +17,12 @@ package main
 
 import (
 	"context"
-	"crypto/sha512"
 	"crypto/tls"
-	"encoding/hex"
 	"errors"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"os"
-	"path/filepath"
 	"strings"
 	"syscall"
 	"time"
@@ -130,32 +126,32 @@ func main() {
 	// Start watching for pod creations
 	go controller.StartWatching(ignoreNamespaces)
 
-	// watch the cert file and restart http sever if the file updated.
-	oldHashVal := ""
+	// Watch certificate metadata and reload the key pair when the certificate is
+	// updated. Avoid reading the file contents here: NewTLSKeypairReloader is the
+	// only component that needs access to the certificate and private key data.
+	var previousCertInfo os.FileInfo
 	for {
-		hasher := sha512.New()
-		certPath, err := filepath.Abs(*cert)
+		currentCertInfo, err := os.Stat(*cert)
 		if err != nil {
-			glog.Fatalf("illegal path %s in certPath: %s: %v", *cert, certPath, err)
-			os.Exit(1)
+			glog.Fatalf("failed to stat certificate file %s: %v", *cert, err)
 		}
-		s, err := ioutil.ReadFile(certPath)
-		hasher.Write(s)
-		if err != nil {
-			glog.Fatalf("failed to read file %s: %v", *cert, err)
-			os.Exit(1)
-		}
-		newHashVal := hex.EncodeToString(hasher.Sum(nil))
-		if oldHashVal != "" && newHashVal != oldHashVal {
+
+		if previousCertInfo != nil && certificateFileChanged(previousCertInfo, currentCertInfo) {
 			if err := proc.Signal(syscall.SIGHUP); err != nil {
 				glog.Fatalf("failed to send certificate update notification: %v", err)
 			}
 		}
-		oldHashVal = newHashVal
+		previousCertInfo = currentCertInfo
 
 		time.Sleep(1 * time.Second)
 	}
 
+}
+
+func certificateFileChanged(previous, current os.FileInfo) bool {
+	return !os.SameFile(previous, current) ||
+		previous.Size() != current.Size() ||
+		!previous.ModTime().Equal(current.ModTime())
 }
 
 func startHTTPServers(config *ServerConfig) (func(), error) {
