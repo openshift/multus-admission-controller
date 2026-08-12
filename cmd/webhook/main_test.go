@@ -131,24 +131,15 @@ func testHTTPServers() {
 		})
 	})
 
-	DescribeTable("should reject TLS min versions below TLS 1.2",
-		func(version string) {
-			config.TLSMinVersion = version
-			_, err := startHTTPServers(config)
-			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(ContainSubstring("below the minimum required version TLS 1.2"))
-		},
-		Entry("TLS 1.0", "VersionTLS10"),
-		Entry("TLS 1.1", "VersionTLS11"),
-	)
-
-	DescribeTable("should accept TLS min versions at or above TLS 1.2",
+	DescribeTable("should accept all TLS min versions",
 		func(version string) {
 			config.TLSMinVersion = version
 			var err error
 			cleanup, err = startHTTPServers(config)
 			Expect(err).NotTo(HaveOccurred())
 		},
+		Entry("TLS 1.0", "VersionTLS10"),
+		Entry("TLS 1.1", "VersionTLS11"),
 		Entry("TLS 1.2", "VersionTLS12"),
 		Entry("TLS 1.3", "VersionTLS13"),
 	)
