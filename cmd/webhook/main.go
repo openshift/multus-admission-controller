@@ -98,7 +98,18 @@ func main() {
 
 	glog.Infof("starting net-attach-def-admission-controller webhook server")
 
-	keyPair, err := webhook.NewTLSKeypairReloader(*cert, *key)
+	// Validate certificate and key file paths
+	validatedCertPath, err := validateFilePath(*cert)
+	if err != nil {
+		glog.Fatal("certificate file path validation failed")
+	}
+
+	validatedKeyPath, err := validateFilePath(*key)
+	if err != nil {
+		glog.Fatal("private key file path validation failed")
+	}
+
+	keyPair, err := webhook.NewTLSKeypairReloader(validatedCertPath, validatedKeyPath)
 	if err != nil {
 		glog.Fatalf("error load certificate: %s", err.Error())
 	}
@@ -134,17 +145,13 @@ func main() {
 	oldHashVal := ""
 	for {
 		hasher := sha512.New()
-		certPath, err := filepath.Abs(*cert)
+		// Use the already-validated certificate path
+		s, err := ioutil.ReadFile(validatedCertPath)
 		if err != nil {
-			glog.Fatalf("illegal path %s in certPath: %s: %v", *cert, certPath, err)
+			glog.Fatalf("failed to read file %s: %v", validatedCertPath, err)
 			os.Exit(1)
 		}
-		s, err := ioutil.ReadFile(certPath)
 		hasher.Write(s)
-		if err != nil {
-			glog.Fatalf("failed to read file %s: %v", *cert, err)
-			os.Exit(1)
-		}
 		newHashVal := hex.EncodeToString(hasher.Sum(nil))
 		if oldHashVal != "" && newHashVal != oldHashVal {
 			if err := proc.Signal(syscall.SIGHUP); err != nil {
@@ -277,4 +284,45 @@ func startHTTPMetricServer(metricsAddress string, tlsConfig *tls.Config) *http.S
 	}()
 
 	return srv
+}
+
+// validateFilePath validates and cleans a file path to prevent path traversal attacks
+func validateFilePath(path string) (string, error) {
+	if path == "" {
+		return "", fmt.Errorf("file path cannot be empty")
+	}
+
+	// Reject parent-directory elements before normalization
+	// Split the path and check for ".." as a path element
+	pathElements := strings.Split(filepath.ToSlash(path), "/")
+	for _, element := range pathElements {
+		if element == ".." {
+			return "", fmt.Errorf("path contains parent directory reference")
+		}
+	}
+
+	// Clean the path to remove any . or .. elements
+	cleanPath := filepath.Clean(path)
+
+	// Convert to absolute path
+	absPath, err := filepath.Abs(cleanPath)
+	if err != nil {
+		return "", fmt.Errorf("failed to resolve absolute path: %w", err)
+	}
+
+	// Evaluate symlinks to validate the target exists and is accessible
+	// This is only for validation - we return absPath to preserve symlinks
+	// for certificate rotation (Kubernetes AtomicWriter uses ..data symlinks)
+	_, err = filepath.EvalSymlinks(absPath)
+	if err != nil {
+		// If the file doesn't exist yet, that's acceptable
+		// The actual file read will fail later if it's truly missing
+		if !os.IsNotExist(err) {
+			return "", fmt.Errorf("failed to evaluate symlinks: %w", err)
+		}
+	}
+
+	// Return the cleaned absolute path (not the resolved symlink target)
+	// This ensures certificate rotation works with Kubernetes projected volumes
+	return absPath, nil
 }
