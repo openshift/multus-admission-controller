@@ -27,6 +27,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strconv"
 	"testing"
 	"time"
@@ -39,6 +40,7 @@ import (
 var (
 	_ = Describe("StringSliceFlag", testStringSliceFlag)
 	_ = Describe("HTTP Servers", testHTTPServers)
+	_ = Describe("validateFilePath", testValidateFilePath)
 )
 
 func TestMain(t *testing.T) {
@@ -388,4 +390,72 @@ func generateTestCertificate() (string, string, error) {
 	}
 
 	return certFile.Name(), keyFile.Name(), nil
+}
+
+func testValidateFilePath() {
+	Context("with valid file paths", func() {
+		It("should accept absolute paths", func() {
+			// Use a path that doesn't exist so it won't be resolved via symlinks
+			validated, err := validateFilePath("/opt/certs/cert.pem")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(validated).To(Equal("/opt/certs/cert.pem"))
+		})
+
+		It("should accept relative paths and convert to absolute", func() {
+			validated, err := validateFilePath("./cert.pem")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(validated).To(HavePrefix("/"))
+			Expect(validated).To(HaveSuffix("/cert.pem"))
+		})
+
+		It("should preserve symlinks for certificate rotation", func() {
+			// Create a temporary directory structure mimicking Kubernetes projected volumes
+			tmpDir, err := os.MkdirTemp("", "cert-test-*")
+			Expect(err).NotTo(HaveOccurred())
+			defer os.RemoveAll(tmpDir)
+
+			// Create a ..data directory (Kubernetes AtomicWriter pattern)
+			dataDir := filepath.Join(tmpDir, "..data")
+			err = os.Mkdir(dataDir, 0755)
+			Expect(err).NotTo(HaveOccurred())
+
+			// Create the actual certificate file in the ..data directory
+			certPath := filepath.Join(dataDir, "tls.crt")
+			err = os.WriteFile(certPath, []byte("fake cert"), 0644)
+			Expect(err).NotTo(HaveOccurred())
+
+			// Create a symlink pointing to the file in ..data
+			symlinkPath := filepath.Join(tmpDir, "tls.crt")
+			err = os.Symlink(filepath.Join("..data", "tls.crt"), symlinkPath)
+			Expect(err).NotTo(HaveOccurred())
+
+			// Validate the symlink path
+			validated, err := validateFilePath(symlinkPath)
+			Expect(err).NotTo(HaveOccurred())
+
+			// The validated path should be the symlink itself, not the resolved target
+			// This ensures certificate rotation continues to work
+			Expect(validated).To(Equal(symlinkPath))
+			Expect(validated).NotTo(ContainSubstring("..data"))
+
+			// Verify the symlink can still be read
+			content, err := os.ReadFile(validated)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(string(content)).To(Equal("fake cert"))
+		})
+
+		It("should reject paths with parent directory references", func() {
+			_, err := validateFilePath("/tmp/../tmp/cert.pem")
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("parent directory reference"))
+		})
+	})
+
+	Context("with invalid inputs", func() {
+		It("should reject empty paths", func() {
+			_, err := validateFilePath("")
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("cannot be empty"))
+		})
+	})
 }
