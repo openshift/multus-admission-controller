@@ -94,6 +94,13 @@ func main() {
 
 	glog.Infof("starting net-attach-def-admission-controller webhook server")
 
+	// Capture the certificate baseline immediately before loading the key pair.
+	// Any replacement after this point will be detected by the watcher below.
+	previousCertInfo, err := os.Stat(*cert)
+	if err != nil {
+		glog.Fatalf("failed to stat certificate file %s: %v", *cert, err)
+	}
+
 	keyPair, err := webhook.NewTLSKeypairReloader(*cert, *key)
 	if err != nil {
 		glog.Fatalf("error load certificate: %s", err.Error())
@@ -129,14 +136,13 @@ func main() {
 	// Watch certificate metadata and reload the key pair when the certificate is
 	// updated. Avoid reading the file contents here: NewTLSKeypairReloader is the
 	// only component that needs access to the certificate and private key data.
-	var previousCertInfo os.FileInfo
 	for {
 		currentCertInfo, err := os.Stat(*cert)
 		if err != nil {
 			glog.Fatalf("failed to stat certificate file %s: %v", *cert, err)
 		}
 
-		if previousCertInfo != nil && certificateFileChanged(previousCertInfo, currentCertInfo) {
+		if certificateFileChanged(previousCertInfo, currentCertInfo) {
 			if err := proc.Signal(syscall.SIGHUP); err != nil {
 				glog.Fatalf("failed to send certificate update notification: %v", err)
 			}
