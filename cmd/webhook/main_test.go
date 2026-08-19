@@ -22,6 +22,7 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"math/big"
 	"net"
@@ -87,7 +88,7 @@ func testCertificateFileChanged() {
 		certPath = certFile.Name()
 		Expect(certFile.Close()).To(Succeed())
 		cleanup = func() {
-			_ = os.Remove(certPath)
+			Expect(os.Remove(certPath)).To(Succeed())
 		}
 	})
 
@@ -121,7 +122,11 @@ func testCertificateFileChanged() {
 		replacement, err := os.CreateTemp("", "certificate-replacement-*.pem")
 		Expect(err).NotTo(HaveOccurred())
 		replacementPath := replacement.Name()
-		defer os.Remove(replacementPath)
+		defer func() {
+			err := os.Remove(replacementPath)
+			Expect(err == nil || errors.Is(err, os.ErrNotExist)).To(BeTrue(),
+				"failed to remove replacement certificate %q: %v", replacementPath, err)
+		}()
 		Expect(replacement.Close()).To(Succeed())
 		Expect(os.Chtimes(replacementPath, previous.ModTime(), previous.ModTime())).To(Succeed())
 		Expect(os.Rename(replacementPath, certPath)).To(Succeed())
