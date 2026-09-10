@@ -22,6 +22,7 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"math/big"
 	"net"
@@ -38,6 +39,7 @@ import (
 
 var (
 	_ = Describe("StringSliceFlag", testStringSliceFlag)
+	_ = Describe("Certificate file change detection", testCertificateFileChanged)
 	_ = Describe("HTTP Servers", testHTTPServers)
 )
 
@@ -72,6 +74,69 @@ func testStringSliceFlag() {
 		Entry("with empty string", "", []string{}),
 		Entry("with empty values", "one,,two,", []string{"one", "two"}),
 	)
+}
+
+func testCertificateFileChanged() {
+	var (
+		certPath string
+		cleanup  func()
+	)
+
+	BeforeEach(func() {
+		certFile, err := os.CreateTemp("", "certificate-change-test-*.pem")
+		Expect(err).NotTo(HaveOccurred())
+		certPath = certFile.Name()
+		Expect(certFile.Close()).To(Succeed())
+		cleanup = func() {
+			Expect(os.Remove(certPath)).To(Succeed())
+		}
+	})
+
+	AfterEach(func() {
+		cleanup()
+	})
+
+	It("does not report an unchanged file", func() {
+		previous, err := os.Stat(certPath)
+		Expect(err).NotTo(HaveOccurred())
+		current, err := os.Stat(certPath)
+		Expect(err).NotTo(HaveOccurred())
+
+		Expect(certificateFileChanged(previous, current)).To(BeFalse())
+	})
+
+	It("detects an in-place update", func() {
+		previous, err := os.Stat(certPath)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(os.WriteFile(certPath, []byte("updated certificate"), 0o600)).To(Succeed())
+		current, err := os.Stat(certPath)
+		Expect(err).NotTo(HaveOccurred())
+
+		Expect(certificateFileChanged(previous, current)).To(BeTrue())
+	})
+
+	It("detects an atomic file replacement", func() {
+		previous, err := os.Stat(certPath)
+		Expect(err).NotTo(HaveOccurred())
+
+		replacement, err := os.CreateTemp("", "certificate-replacement-*.pem")
+		Expect(err).NotTo(HaveOccurred())
+		replacementPath := replacement.Name()
+		defer func() {
+			err := os.Remove(replacementPath)
+			Expect(err == nil || errors.Is(err, os.ErrNotExist)).To(BeTrue(),
+				"failed to remove replacement certificate %q: %v", replacementPath, err)
+		}()
+		Expect(replacement.Close()).To(Succeed())
+		Expect(os.Chtimes(replacementPath, previous.ModTime(), previous.ModTime())).To(Succeed())
+		Expect(os.Rename(replacementPath, certPath)).To(Succeed())
+
+		current, err := os.Stat(certPath)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(current.Size()).To(Equal(previous.Size()))
+		Expect(current.ModTime()).To(Equal(previous.ModTime()))
+		Expect(certificateFileChanged(previous, current)).To(BeTrue())
+	})
 }
 
 func testHTTPServers() {
