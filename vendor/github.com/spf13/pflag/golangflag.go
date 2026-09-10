@@ -15,6 +15,7 @@ import (
 func isGotestFlag(flag string) bool {
 	return strings.HasPrefix(flag, "-test.")
 }
+
 func isGotestShorthandFlag(flag string) bool {
 	return strings.HasPrefix(flag, "test.")
 }
@@ -157,3 +158,4 @@ func ParseSkippedFlags(osArgs []string, goFlagSet *goflag.FlagSet) error {
 	}
 	return goFlagSet.Parse(skippedFlags)
 }
+

@@ -32,6 +32,7 @@ option go_package = "k8s.io/api/scheduling/v1alpha2";
 // scheduling behavior should be used.
 message BasicSchedulingPolicy {
 }
+
 // GangSchedulingPolicy defines the parameters for gang scheduling.
 message GangSchedulingPolicy {
   // MinCount is the minimum number of pods that must be schedulable or scheduled
@@ -546,3 +547,4 @@ message WorkloadSpec {
   // +k8s:immutable
   repeated PodGroupTemplate podGroupTemplates = 2;
 }
+
