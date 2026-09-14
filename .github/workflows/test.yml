@@ -4,20 +4,20 @@ jobs:
   test:
     strategy:
       matrix:
-        go-version: [1.25.x]
+        go-version: [1.26.x]
         os: [ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
     - name: Install Go
-      uses: actions/setup-go@v3
+      uses: actions/setup-go@be3c94b385c4f180051c996d336f57a34c397495 # v3
       with:
         go-version: ${{ matrix.go-version }}
 
     - name: Checkout code
-      uses: actions/checkout@v3
+      uses: actions/checkout@a37ce9120846195fa4ece8f58b268e6043cb2f26 # v3
 
     - name: Run Revive Action by pulling pre-built image
-      uses: docker://morphy/revive-action:v2
+      uses: docker://morphy/revive-action@sha256:1ec5904abc4d8b2cd5fbb2987fc79a227f21a4231d757cc9a09a9ee3ab3c328b # v2
       with:
         exclude: "./vendor/..."
 
@@ -32,7 +32,7 @@ jobs:
       run: sudo ./hack/test.sh
 
     - name: Send coverage
-      uses: shogo82148/actions-goveralls@v1
+      uses: shogo82148/actions-goveralls@8781f5dd05b691c4dd042d5e859c11c73e0104fa # v1
       with:
         path-to-profile: coverage.out
         flag-name: Go-${{ matrix.go }}
@@ -43,6 +43,6 @@ jobs:
     needs: test
     runs-on: ubuntu-latest
     steps:
-      - uses: shogo82148/actions-goveralls@v1
+      - uses: shogo82148/actions-goveralls@8781f5dd05b691c4dd042d5e859c11c73e0104fa # v1
         with:
           parallel-finished: true
