@@ -28,6 +28,8 @@ spec:
     spec:
       containers:
       - name: net-attach-def-admission-controller
+        securityContext:
+          readOnlyRootFilesystem: true
         image: ghcr.io/k8snetworkplumbingwg/net-attach-def-admission-controller:snapshot
         command:
         - /usr/src/net-attach-def-admission-controller/bin/webhook
@@ -36,7 +38,7 @@ spec:
         - -port=443
         - -tls-private-key-file=/etc/webhook/key.pem
         - -tls-cert-file=/etc/webhook/cert.pem
-        - -alsologtostderr=true
+        - -logtostderr=true
         - -metrics-listen-address=0.0.0.0:9091
         volumeMounts:
         - name: webhook-certs
@@ -44,6 +46,8 @@ spec:
           readOnly: True
         imagePullPolicy: IfNotPresent
       - name: kube-rbac-proxy
+        securityContext:
+          readOnlyRootFilesystem: true
         image: quay.io/coreos/kube-rbac-proxy:v0.4.1
         args:
         - --logtostderr
