@@ -32,8 +32,7 @@ import (
 	"testing"
 	"time"
 
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/ginkgo/extensions/table"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 
@@ -141,17 +140,19 @@ func testCertificateFileChanged() {
 
 func testHTTPServers() {
 	var (
-		certFile string
-		keyFile  string
-		config   *ServerConfig
-		cleanup  func()
+		config  *ServerConfig
+		cleanup func()
 	)
 
 	BeforeEach(func() {
 		// Generate test certificate and key
-		var err error
-		certFile, keyFile, err = generateTestCertificate()
+		certFile, keyFile, err := generateTestCertificate()
 		Expect(err).NotTo(HaveOccurred())
+
+		DeferCleanup(func() {
+			_ = os.Remove(certFile)
+			_ = os.Remove(keyFile)
+		})
 
 		config = &ServerConfig{
 			Address:        "127.0.0.1",
@@ -171,12 +172,6 @@ func testHTTPServers() {
 	AfterEach(func() {
 		if cleanup != nil {
 			cleanup()
-		}
-		if certFile != "" {
-			_ = os.Remove(certFile)
-		}
-		if keyFile != "" {
-			_ = os.Remove(keyFile)
 		}
 	})
 

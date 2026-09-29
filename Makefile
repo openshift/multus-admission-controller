@@ -15,5 +15,5 @@
 default :
 	scripts/build.sh
 
-test : deps
-	ginkgo ./... -cover
+test:
+	go test -v ./...
