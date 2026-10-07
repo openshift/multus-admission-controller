@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -43,13 +44,14 @@ const (
 
 // ServerConfig holds configuration for the HTTP servers
 type ServerConfig struct {
-	Port            int
-	Address         string
-	MetricsAddress  string
-	EncryptMetrics  bool
-	TLSMinVersion   string
-	TLSCipherSuites StringSliceFlag
-	GetCertificate  func(*tls.ClientHelloInfo) (*tls.Certificate, error)
+	Port                int
+	Address             string
+	MetricsAddress      string
+	EncryptMetrics      bool
+	TLSMinVersion       string
+	TLSCipherSuites     StringSliceFlag
+	TLSCurvePreferences StringSliceFlag
+	GetCertificate      func(*tls.ClientHelloInfo) (*tls.Certificate, error)
 }
 
 // StringSliceFlag implements flag.Value interface for comma-separated string lists
@@ -86,6 +88,13 @@ func main() {
 	flag.BoolVar(&config.EncryptMetrics, "encrypt-metrics", false, "serve metrics over HTTPS using tls-cert-file/tls-private-key-file x509 key pair")
 	flag.StringVar(&config.TLSMinVersion, "tls-min-version", "", "Minimum TLS version supported")
 	flag.Var(&config.TLSCipherSuites, "tls-cipher-suites", "Comma-separated list of cipher suites")
+	flag.Var(&config.TLSCurvePreferences, "tls-curve-preferences",
+		"Comma-separated list of numeric Go crypto/tls CurveID values, as the allowed key exchange mechanisms for the server. "+
+			"The supported values depend on the Go version used. "+
+			"See https://pkg.go.dev/crypto/tls#CurveID for values supported for each Go version. "+
+			"The order of the list is ignored, and key exchange mechanisms are chosen "+
+			"by Go from this list using an internal preference order. "+
+			"If omitted, the default Go curves will be used.")
 
 	var ignoreNamespaces StringSliceFlag
 	flag.Var(&ignoreNamespaces, "ignore-namespaces", "Comma separated namespace list to ignore pod update")
@@ -175,6 +184,21 @@ func startHTTPServers(config *ServerConfig) (func(), error) {
 		}
 	}
 
+	// Convert TLSCurvePreferences from []string to []int32
+	curvePrefsInt32 := make([]int32, 0, len(config.TLSCurvePreferences))
+	for _, s := range config.TLSCurvePreferences {
+		val, err := strconv.ParseInt(s, 10, 32)
+		if err != nil {
+			return nil, fmt.Errorf("error parsing TLS curve preference %q: %w", s, err)
+		}
+		curvePrefsInt32 = append(curvePrefsInt32, int32(val))
+	}
+
+	tlsCurves, err := cliflag.TLSCurvePreferences(curvePrefsInt32)
+	if err != nil {
+		return nil, fmt.Errorf("error parsing TLS curve preferences %v: %w", config.TLSCurvePreferences, err)
+	}
+
 	applyTLSOptions := func(to *tls.Config) *tls.Config {
 		if tlsMinVersionID != 0 {
 			to.MinVersion = tlsMinVersionID
@@ -182,6 +206,10 @@ func startHTTPServers(config *ServerConfig) (func(), error) {
 
 		if len(tlsCipherSuiteIDs) > 0 {
 			to.CipherSuites = tlsCipherSuiteIDs
+		}
+
+		if len(tlsCurves) > 0 {
+			to.CurvePreferences = tlsCurves
 		}
 
 		to.GetCertificate = config.GetCertificate

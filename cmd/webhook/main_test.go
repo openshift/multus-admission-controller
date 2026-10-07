@@ -273,6 +273,33 @@ func testHTTPServers() {
 				testShouldRejectTLSVersions(bindAddress)
 			})
 		})
+
+		Context("with TLS curve preferences specified", func() {
+			BeforeEach(func() {
+				config.TLSMinVersion = "VersionTLS12"
+				// Configure server to accept only P-256 and P-384 curves
+				// P-256 = 23, P-384 = 24
+				config.TLSCurvePreferences = StringSliceFlag{"23", "24"}
+			})
+
+			It("should successfully handshake with supported curves", func() {
+				testTLSHandshake(bindAddress, tls.VersionTLS12, nil, func(g Gomega, state tls.ConnectionState, err error) {
+					g.Expect(err).NotTo(HaveOccurred())
+					g.Expect(state.HandshakeComplete).To(BeTrue())
+					// Verify that one of the configured curves was negotiated
+					g.Expect(state.CurveID).To(Or(Equal(tls.CurveP256), Equal(tls.CurveP384)))
+				})
+			})
+		})
+
+		Context("with invalid TLS curve preferences", func() {
+			It("should return error on invalid curve ID", func() {
+				config.TLSCurvePreferences = StringSliceFlag{"99999"}
+				_, err := startHTTPServers(config)
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("curve preferences"))
+			})
+		})
 	})
 
 	Context("Metrics", func() {
