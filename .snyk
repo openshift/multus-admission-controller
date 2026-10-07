@@ -4,7 +4,4 @@
 exclude:
   global:
     - "**/*_test.go"
-    - vendor/github.com/golang/glog
-    - vendor/github.com/google/uuid
-    - vendor/k8s.io/client-go/util/cert
-    - vendor/k8s.io/klog/v2/
+    - 'vendor/**' # Upstream dependencies (not project code)
