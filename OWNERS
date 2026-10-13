@@ -1,0 +1,20 @@
+reviewers:
+  - dougbtv
+  - zshi
+  - fepan
+  - s1061123
+  - jeremyeder
+  - aneeshkp
+  - bpickard22
+  - pliurh
+approvers:
+  - dougbtv
+  - zshi
+  - fepan
+  - s1061123
+  - jeremyeder
+  - aneeshkp
+  - bpickard22
+  - pliurh
+component: "Networking"
+subcomponent: "multus"

@@ -1,0 +1,20 @@
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: net-attach-def-admission-controller-isolating-config
+webhooks:
+  - name: net-attach-def-admission-controller-isolating-config.k8s.io
+    clientConfig:
+      service:
+        name: net-attach-def-admission-controller-service
+        namespace: ${NAMESPACE}
+        path: "/isolate"
+      caBundle: ${CA_BUNDLE}
+    admissionReviewVersions: ['v1']
+    sideEffects: None
+    rules:
+      - operations: [ "CREATE" ]
+        apiGroups: ["apps", ""]
+        apiVersions: ["v1"]
+        resources: ["pods"]

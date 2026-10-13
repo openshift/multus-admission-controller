@@ -1,0 +1,12 @@
+# Build artifacts
+bin/
+gopath/
+
+# Test coverage files
+coverprofile.out
+*.out
+coverage.txt
+*.coverprofile
+
+# Go workspace file
+go.work
