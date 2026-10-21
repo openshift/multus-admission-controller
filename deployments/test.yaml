@@ -28,6 +28,8 @@ spec:
     spec:
       containers:
       - name: net-attach-def-admission-controller
+        securityContext:
+          readOnlyRootFilesystem: true
         #image: nfvpe/net-attach-def-admission-controller:snapshot
         image: quay.io/s1061123/nad-admission:latest
         command:
@@ -37,7 +39,10 @@ spec:
         - -port=443
         - -tls-private-key-file=/etc/webhook/key.pem
         - -tls-cert-file=/etc/webhook/cert.pem
-        - -alsologtostderr=true
+        # The webhook uses glog. logtostderr disables file logging, which would
+        # fail on the read-only root filesystem. Kubernetes still captures the
+        # stderr stream, but the container no longer creates application log files.
+        - -logtostderr=true
         - -metrics-listen-address=0.0.0.0:9091
         - -ignore-namespaces="openshift-apiserver,openshift-apiserver-operator,openshift-authentication,openshift-authentication-operator,openshift-cluster-node-tuning-operator,openshift-cluster-storage-operator,openshift-console,openshift-controller-manager,openshift-dns,openshift-etcd,openshift-image-registry,openshift-ingress-canary,openshift-kube-apiserver,openshift-kube-controller-manager,openshift-kube-scheduler,openshift-machine-config-operator,openshift-marketplace,openshift-monitoring,openshift-multus,openshift-network-diagnotics,openshift-operator-lifecycle-manager,openshift-ovn-kubernetes"
         volumeMounts:
@@ -46,6 +51,8 @@ spec:
           readOnly: True
         imagePullPolicy: IfNotPresent
       - name: kube-rbac-proxy
+        securityContext:
+          readOnlyRootFilesystem: true
         image: quay.io/coreos/kube-rbac-proxy:v0.4.1
         args:
         - --logtostderr
