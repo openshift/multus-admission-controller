@@ -183,7 +183,7 @@ go.yaml.in/yaml/v2
 # go.yaml.in/yaml/v3 v3.0.4
 ## explicit; go 1.16
 go.yaml.in/yaml/v3
-# golang.org/x/net v0.49.0 => github.com/openshift-sustaining/net v0.50.0-sec.3
+# golang.org/x/net v1.26.9 => github.com/openshift-sustaining/net v0.50.0-sec.3
 ## explicit; go 1.24.0
 golang.org/x/net/html
 golang.org/x/net/html/atom
